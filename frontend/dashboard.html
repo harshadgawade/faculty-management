@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FMS — Faculty Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+    :root {
+      --bg-base:     #0e0e1a;
+      --bg-card:     rgba(255,255,255,0.05);
+      --bg-card-hov: rgba(255,255,255,0.09);
+      --border:      rgba(255,255,255,0.10);
+      --purple:      #8b5cf6;
+      --indigo:      #6366f1;
+      --violet:      #7c3aed;
+      --text-primary: #f1f5f9;
+      --text-muted:   rgba(255,255,255,0.45);
+    }
+
+    html,body { background: var(--bg-base); color: var(--text-primary); min-height:100vh; }
+
+    /* ── Sidebar ──────────────────────────────────────── */
+    #sidebar {
+      background: linear-gradient(180deg, #13132b 0%, #0e0e1a 100%);
+      border-right: 1px solid var(--border);
+      width: 260px; min-height:100vh;
+      position: fixed; top:0; left:0; z-index:40;
+      transition: transform 0.3s ease;
+    }
+    #sidebar.collapsed { transform: translateX(-260px); }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px; border-radius: 10px; cursor: pointer;
+      color: var(--text-muted); font-size: 0.875rem; font-weight: 500;
+      transition: all 0.2s; margin: 2px 12px;
+    }
+    .nav-item:hover  { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+    .nav-item.active { background: linear-gradient(135deg,rgba(139,92,246,0.35),rgba(99,102,241,0.25));
+                       color: #fff; border: 1px solid rgba(139,92,246,0.35); }
+    .nav-item svg    { width:18px; height:18px; flex-shrink:0; }
+
+    /* ── Main content ─────────────────────────────────── */
+    #main { margin-left:260px; transition: margin-left 0.3s; }
+    #main.expanded { margin-left:0; }
+
+    /* ── Topbar ───────────────────────────────────────── */
+    #topbar {
+      background: rgba(14,14,26,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top:0; z-index:30; height:68px;
+    }
+
+    /* ── Glass card ───────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      backdrop-filter: blur(10px);
+      transition: all 0.25s ease;
+    }
+    .card:hover { background: var(--bg-card-hov); transform: translateY(-1px); }
+
+    /* ── KPI card gradient borders ────────────────────── */
+    .kpi-card { position:relative; overflow:hidden; }
+    .kpi-card::before {
+      content:'';
+      position:absolute; inset:0; border-radius:18px;
+      padding:1px;
+      background: var(--grad, linear-gradient(135deg,#8b5cf6,#6366f1));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+    }
+
+    /* ── Scrollbar ────────────────────────────────────── */
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:rgba(139,92,246,0.4); border-radius:10px; }
+
+    /* ── Badge ────────────────────────────────────────── */
+    .badge {
+      display:inline-flex; align-items:center; padding: 2px 10px;
+      border-radius: 9999px; font-size: 0.7rem; font-weight:600;
+    }
+    .badge-high   { background:rgba(239,68,68,0.15);  color:#f87171; border:1px solid rgba(239,68,68,0.25); }
+    .badge-medium { background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.25); }
+    .badge-low    { background:rgba(34,197,94,0.15);  color:#4ade80; border:1px solid rgba(34,197,94,0.25); }
+    .badge-present { background:rgba(34,197,94,0.12); color:#4ade80; }
+    .badge-leave   { background:rgba(245,158,11,0.12);color:#fbbf24; }
+    .badge-absent  { background:rgba(239,68,68,0.12); color:#f87171; }
+    .badge-pending { background:rgba(139,92,246,0.12);color:#c4b5fd; }
+
+    /* ── Progress bar ─────────────────────────────────── */
+    .progress-bar { background:rgba(255,255,255,0.08); border-radius:9999px; overflow:hidden; }
+    .progress-fill {
+      height:100%; border-radius:9999px;
+      background: linear-gradient(90deg,#8b5cf6,#6366f1);
+      transition: width 1s ease;
+    }
+
+    /* ── Notification dot ─────────────────────────────── */
+    .notif-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:#8b5cf6; display:inline-block;
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.3);
+      animation: pulse-ring 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%,100% { box-shadow: 0 0 0 3px rgba(139,92,246,0.3); }
+      50%      { box-shadow: 0 0 0 7px rgba(139,92,246,0.1); }
+    }
+
+    /* ── Tab nav ──────────────────────────────────────── */
+    .tab-btn {
+      padding: 6px 18px; border-radius:8px; font-size:0.8rem; font-weight:500;
+      color:var(--text-muted); cursor:pointer; transition:all 0.2s;
+      border: 1px solid transparent;
+    }
+    .tab-btn.active {
+      background:rgba(139,92,246,0.2); color:#c4b5fd;
+      border-color:rgba(139,92,246,0.35);
+    }
+    .tab-btn:hover:not(.active) { color:#fff; background:rgba(255,255,255,0.05); }
+
+    /* ── Table ────────────────────────────────────────── */
+    .fms-table { width:100%; border-collapse:collapse; }
+    .fms-table th {
+      text-align:left; padding:10px 14px; font-size:0.72rem; font-weight:600;
+      color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em;
+      border-bottom:1px solid var(--border);
+    }
+    .fms-table td {
+      padding:12px 14px; font-size:0.83rem; border-bottom:1px solid rgba(255,255,255,0.04);
+      vertical-align:middle;
+    }
+    .fms-table tr:last-child td { border-bottom:none; }
+    .fms-table tr:hover td     { background:rgba(255,255,255,0.025); }
+
+    /* ── Calendar ─────────────────────────────────────── */
+    .cal-day {
+      aspect-ratio:1; border-radius:8px; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; font-size:0.78rem; cursor:pointer;
+      transition:all 0.2s; position:relative;
+    }
+    .cal-day:hover { background:rgba(139,92,246,0.2); }
+    .cal-day.today { background:rgba(139,92,246,0.35); font-weight:700; border:1px solid #8b5cf6; }
+    .cal-day.has-event::after {
+      content:''; position:absolute; bottom:3px;
+      width:4px; height:4px; border-radius:50%; background:#8b5cf6;
+    }
+    .cal-day.holiday { color:#f87171; }
+    .cal-day.other-month { color:rgba(255,255,255,0.2); }
+
+    /* ── Lecture punch ────────────────────────────────── */
+    .punch-btn {
+      padding: 10px 24px; border-radius:12px; font-weight:600; font-size:0.875rem;
+      transition:all 0.3s; cursor:pointer; border:none;
+    }
+    .punch-in  { background:linear-gradient(135deg,#10b981,#059669); color:#fff; }
+    .punch-out { background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; }
+    .punch-btn:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,0.3); }
+
+    /* ── Org tree ─────────────────────────────────────── */
+    .org-node {
+      background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.3);
+      border-radius:12px; padding:10px 16px; text-align:center;
+      font-size:0.8rem; font-weight:500; min-width:120px;
+      transition:all 0.2s; cursor:default;
+    }
+    .org-node:hover { background:rgba(139,92,246,0.25); }
+    .org-connector { border-left:1px solid rgba(139,92,246,0.3); margin:0 auto; }
+
+    /* ── Input ────────────────────────────────────────── */
+    .fms-input {
+      background:rgba(255,255,255,0.06); border:1px solid var(--border);
+      border-radius:10px; color:#fff; padding:9px 14px; font-size:0.875rem;
+      transition:all 0.2s; outline:none;
+    }
+    .fms-input:focus { border-color:rgba(139,92,246,0.6); background:rgba(255,255,255,0.09); }
+    .fms-input::placeholder { color:var(--text-muted); }
+
+    /* ── Tooltip ──────────────────────────────────────── */
+    [data-tooltip] { position:relative; }
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position:absolute; bottom:110%; left:50%; transform:translateX(-50%);
+      background:#1e1e3a; color:#fff; font-size:0.72rem; white-space:nowrap;
+      padding:4px 10px; border-radius:6px; pointer-events:none;
+      opacity:0; transition:opacity 0.2s;
+      border:1px solid var(--border);
+    }
+    [data-tooltip]:hover::after { opacity:1; }
+
+    /* ── Section fade-in ──────────────────────────────── */
+    .section { display:none; }
+    .section.active { display:block; animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ── Language dropdown ────────────────────────────── */
+    #langDropdown {
+      display:none; position:absolute; top:100%; right:0; mt-2;
+      background:#1a1a30; border:1px solid var(--border); border-radius:10px;
+      overflow:hidden; min-width:140px; z-index:99;
+    }
+    #langDropdown.open { display:block; animation:fadeIn 0.2s ease; }
+    .lang-opt {
+      padding:10px 16px; font-size:0.83rem; cursor:pointer;
+      color:var(--text-muted); transition:all 0.15s;
+    }
+    .lang-opt:hover { background:rgba(139,92,246,0.15); color:#fff; }
+
+    @media(max-width:768px) {
+      #sidebar { transform:translateX(-260px); }
+      #sidebar.open { transform:translateX(0); }
+      #main { margin-left:0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════════════ -->
+<aside id="sidebar">
+  <!-- Brand -->
+  <div class="p-5 border-b border-white/10 flex items-center gap-3">
+    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center flex-shrink-0">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0112 21.622"/>
+      </svg>
+    </div>
+    <div>
+      <p class="text-sm font-bold text-white leading-tight">FMS Dashboard</p>
+      <p class="text-xs text-white/40">University Edition</p>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="mt-4 space-y-0.5">
+    <div class="px-4 py-2 text-xs font-semibold text-white/25 uppercase tracking-widest">Main</div>
+
+    <div class="nav-item active" onclick="showSection('home')" id="nav-home">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+      </svg>
+      Home
+    </div>
+
+    <div class="nav-item" onclick="showSection('attendance')" id="nav-attendance">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+      </svg>
+      Attendance
+    </div>
+
+    <div class="nav-item" onclick="showSection('leaves')" id="nav-leaves">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+      Leave Management
+      <span id="pendingBadge" class="ml-auto bg-purple-500/30 text-purple-300 text-xs font-bold px-2 py-0.5 rounded-full">3</span>
+    </div>
+
+    <div class="nav-item" onclick="showSection('schedule')" id="nav-schedule">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Schedule & Calendar
+    </div>
+
+    <div class="nav-item" onclick="showSection('faculty')" id="nav-faculty">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      Faculty Directory
+    </div>
+
+    <div class="px-4 py-2 mt-3 text-xs font-semibold text-white/25 uppercase tracking-widest">Finance</div>
+
+    <div class="nav-item" onclick="showSection('payroll')" id="nav-payroll">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Payroll & Salary
+    </div>
+
+    <div class="nav-item" onclick="showSection('tasks')" id="nav-tasks">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Tasks & To-Do
+    </div>
+
+    <div class="px-4 py-2 mt-3 text-xs font-semibold text-white/25 uppercase tracking-widest">Reports</div>
+
+    <div class="nav-item" onclick="showSection('reports')" id="nav-reports">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Reports & Exports
+    </div>
+  </nav>
+
+  <!-- User profile at bottom -->
+  <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0" id="avatarInitials">AS</div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-white truncate" id="sidebarUserName">Dr. Amit Sharma</p>
+        <p class="text-xs text-white/40 truncate" id="sidebarUserRole">PROFESSOR</p>
+      </div>
+      <button onclick="handleLogout()" data-tooltip="Logout" class="text-white/30 hover:text-red-400 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════════════════════════════════════════════════
+     MAIN
+════════════════════════════════════════════════════ -->
+<div id="main">
+
+  <!-- ── Topbar ─────────────────────────────────────── -->
+  <header id="topbar" class="flex items-center px-6 gap-4">
+    <!-- Hamburger -->
+    <button onclick="toggleSidebar()" class="text-white/50 hover:text-white transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+
+    <!-- Breadcrumb -->
+    <div class="text-sm text-white/40">
+      <span class="text-white/70 font-medium" id="breadcrumb">Home</span>
+    </div>
+
+    <div class="ml-auto flex items-center gap-3">
+      <!-- Search -->
+      <div class="relative hidden md:block">
+        <svg class="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input class="fms-input pl-9 pr-4 py-2 text-sm w-52" placeholder="Search faculty, courses…"/>
+      </div>
+
+      <!-- Language selector -->
+      <div class="relative">
+        <button onclick="toggleLangDropdown()"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-violet-500/40 transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+          </svg>
+          <span id="currentLang">EN</span>
+        </button>
+        <div id="langDropdown">
+          <div class="lang-opt" onclick="setLang('en','EN')">🇬🇧 English</div>
+          <div class="lang-opt" onclick="setLang('hi','HI')">🇮🇳 हिंदी</div>
+          <div class="lang-opt" onclick="setLang('mr','MR')">🇮🇳 मराठी</div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <button class="relative p-2 rounded-lg hover:bg-white/5 text-white/50 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+        </svg>
+        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-500 rounded-full"></span>
+      </button>
+
+      <!-- Avatar -->
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm cursor-pointer" id="topbarAvatar">AS</div>
+    </div>
+  </header>
+
+  <!-- ── Page content ────────────────────────────────── -->
+  <div class="p-6 space-y-6">
+
+    <!-- ════════════════════════════════════════
+         SECTION: HOME
+    ════════════════════════════════════════ -->
+    <div id="section-home" class="section active">
+
+      <!-- Dynamic Greeting Banner -->
+      <div class="card p-6 relative overflow-hidden mb-6"
+           style="background:linear-gradient(135deg,rgba(139,92,246,0.2),rgba(99,102,241,0.15));">
+        <div class="absolute inset-0 opacity-10"
+             style="background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2280%22 cy=%2220%22 r=%2260%22 fill=%22%238b5cf6%22/></svg>') no-repeat right -20px center/200px;">
+        </div>
+        <div class="relative z-10">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p class="text-white/50 text-sm mb-1" id="greetingTime">—</p>
+              <h2 class="text-2xl font-bold text-white mb-1" id="greetingName">Welcome back!</h2>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="badge badge-present px-3 py-1" id="greetingRole">PROFESSOR</span>
+                <span class="text-white/30 text-xs">·</span>
+                <span class="text-white/50 text-xs">Computer Science & Engineering</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="showSection('attendance')"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm font-medium hover:bg-purple-500/30 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Mark Attendance
+              </button>
+              <button onclick="showSection('leaves')"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm font-medium hover:bg-emerald-500/30 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Approve Leave
+              </button>
+              <button onclick="showNoticeModal()"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm font-medium hover:bg-amber-500/30 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                </svg>
+                Post Announcement
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Cards Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="card kpi-card p-5" style="--grad:linear-gradient(135deg,#8b5cf6,#6366f1)">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <span class="text-xs text-emerald-400 font-medium">↑ 4%</span>
+          </div>
+          <p class="text-3xl font-bold text-white" id="kpiTotalFaculty">142</p>
+          <p class="text-xs text-white/45 mt-1">Total Faculty Members</p>
+        </div>
+
+        <div class="card kpi-card p-5" style="--grad:linear-gradient(135deg,#10b981,#059669)">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <span class="text-xs text-emerald-400 font-medium">Today</span>
+          </div>
+          <p class="text-3xl font-bold text-white" id="kpiPresent">118</p>
+          <p class="text-xs text-white/45 mt-1">Present Today</p>
+        </div>
+
+        <div class="card kpi-card p-5" style="--grad:linear-gradient(135deg,#f59e0b,#d97706)">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <span class="text-xs text-amber-400 font-medium">Pending</span>
+          </div>
+          <p class="text-3xl font-bold text-white" id="kpiLeaves">7</p>
+          <p class="text-xs text-white/45 mt-1">Leave Requests</p>
+        </div>
+
+        <div class="card kpi-card p-5" style="--grad:linear-gradient(135deg,#3b82f6,#2563eb)">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <span class="text-xs text-blue-400 font-medium">Sep 2026</span>
+          </div>
+          <p class="text-3xl font-bold text-white" id="kpiPayroll">₹48.3L</p>
+          <p class="text-xs text-white/45 mt-1">Monthly Net Payroll</p>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+
+        <!-- Attendance Trend (2/3 width) -->
+        <div class="card p-5 lg:col-span-2">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h3 class="font-semibold text-white text-sm">Attendance Trend</h3>
+              <p class="text-xs text-white/40 mt-0.5">Last 7 days · Present vs Absent</p>
+            </div>
+            <div class="flex gap-2">
+              <span class="tab-btn active" onclick="setChartPeriod('7d',this)">7D</span>
+              <span class="tab-btn" onclick="setChartPeriod('30d',this)">30D</span>
+            </div>
+          </div>
+          <div class="h-52"><canvas id="attendanceChart"></canvas></div>
+        </div>
+
+        <!-- Faculty by Dept (1/3 width) -->
+        <div class="card p-5">
+          <h3 class="font-semibold text-white text-sm mb-1">Faculty Distribution</h3>
+          <p class="text-xs text-white/40 mb-4">By Department</p>
+          <div class="h-48"><canvas id="deptChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Salary Breakdown & Syllabus Progress -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+
+        <!-- Salary chart -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h3 class="font-semibold text-white text-sm">Salary Tier Breakdown</h3>
+              <p class="text-xs text-white/40 mt-0.5">Monthly gross by designation</p>
+            </div>
+          </div>
+          <div class="h-44"><canvas id="salaryChart"></canvas></div>
+        </div>
+
+        <!-- Syllabus progress -->
+        <div class="card p-5">
+          <h3 class="font-semibold text-white text-sm mb-1">Syllabus Completion</h3>
+          <p class="text-xs text-white/40 mb-4">Current semester progress</p>
+          <div class="space-y-4" id="syllabusProgress">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Notice Board + Activity Stream -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        <!-- Notice board -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-white text-sm">Notice Board</h3>
+            <span class="notif-dot"></span>
+          </div>
+          <div class="space-y-3" id="noticeList"><!-- JS injected --></div>
+        </div>
+
+        <!-- Activity stream -->
+        <div class="card p-5">
+          <h3 class="font-semibold text-white text-sm mb-4">Activity Stream</h3>
+          <div class="space-y-3" id="activityStream"><!-- JS injected --></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         SECTION: ATTENDANCE
+    ════════════════════════════════════════ -->
+    <div id="section-attendance" class="section">
+      <h2 class="text-lg font-bold text-white mb-5">Attendance Management</h2>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+        <!-- Punch Widget -->
+        <div class="card p-5 text-center">
+          <h3 class="font-semibold text-white text-sm mb-4">Lecture Time Logger</h3>
+          <div class="w-28 h-28 rounded-full border-4 border-purple-500/40 flex items-center justify-center mx-auto mb-4"
+               id="punchClock" style="background:rgba(139,92,246,0.1)">
+            <div>
+              <p class="text-2xl font-bold text-white" id="punchTime">00:00:00</p>
+              <p class="text-xs text-white/40" id="punchStatus">Not Started</p>
+            </div>
+          </div>
+          <div class="flex gap-3 justify-center">
+            <button class="punch-btn punch-in" id="punchInBtn" onclick="punchIn()">
+              ▶ Punch In
+            </button>
+            <button class="punch-btn punch-out" id="punchOutBtn" onclick="punchOut()" disabled style="opacity:0.4">
+              ◼ Punch Out
+            </button>
+          </div>
+          <p class="text-xs text-white/30 mt-3" id="punchDateLabel"></p>
+        </div>
+
+        <!-- Monthly summary donut -->
+        <div class="card p-5">
+          <h3 class="font-semibold text-white text-sm mb-4">Monthly Summary</h3>
+          <div class="h-44"><canvas id="attendancePieChart"></canvas></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="card p-5">
+          <h3 class="font-semibold text-white text-sm mb-4">This Month</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <p class="text-2xl font-bold text-emerald-400">18</p>
+              <p class="text-xs text-white/40 mt-0.5">Present</p>
+            </div>
+            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <p class="text-2xl font-bold text-amber-400">4</p>
+              <p class="text-xs text-white/40 mt-0.5">On Duty</p>
+            </div>
+            <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+              <p class="text-2xl font-bold text-blue-400">2</p>
+              <p class="text-xs text-white/40 mt-0.5">Leave</p>
+            </div>
+            <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+              <p class="text-2xl font-bold text-red-400">1</p>
+              <p class="text-xs text-white/40 mt-0.5">Absent</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attendance log table -->
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-white text-sm">Daily Attendance Log</h3>
+          <div class="flex gap-2">
+            <input type="month" class="fms-input text-sm py-1.5" id="attMonthPicker" />
+            <button class="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 text-sm hover:bg-purple-500/30 transition-colors">
+              Export CSV
+            </button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="fms-table">
+            <thead><tr>
+              <th>Date</th><th>Faculty</th><th>Check In</th><th>Check Out</th><th>Hours</th><th>Status</th>
+            </tr></thead>
+            <tbody id="attendanceTableBody"><!-- JS --></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         SECTION: LEAVE MANAGEMENT
+    ════════════════════════════════════════ -->
+    <div id="section-leaves" class="section">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-lg font-bold text-white">Leave Management</h2>
+        <button onclick="openLeaveModal()"
+          class="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm font-medium hover:bg-purple-500/30 transition-all">
+          + Apply for Leave
+        </button>
+      </div>
+
+      <!-- Leave balance cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5" id="leaveBalanceCards"><!-- JS --></div>
+
+      <!-- Pending Approvals -->
+      <div class="card p-5 mb-5">
+        <h3 class="font-semibold text-white text-sm mb-4">Pending Approvals</h3>
+        <div class="overflow-x-auto">
+          <table class="fms-table">
+            <thead><tr>
+              <th>Faculty</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="pendingLeavesTable"><!-- JS --></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         SECTION: SCHEDULE & CALENDAR
+    ════════════════════════════════════════ -->
+    <div id="section-schedule" class="section">
+      <h2 class="text-lg font-bold text-white mb-5">Academic Calendar & Schedule</h2>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <!-- Calendar widget -->
+        <div class="card p-5 lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-white" id="calTitle">September 2026</h3>
+            <div class="flex gap-2">
+              <button onclick="calNav(-1)" class="p-1.5 rounded-lg hover:bg-white/5 text-white/50 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <button onclick="calNav(1)"  class="p-1.5 rounded-lg hover:bg-white/5 text-white/50 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <!-- Day headers -->
+          <div class="grid grid-cols-7 gap-1 mb-2">
+            <div class="text-center text-xs text-white/30 py-1" v-for="d in ['Su','Mo','Tu','We','Th','Fr','Sa']">Su</div>
+            <div class="text-center text-xs text-white/30 py-1">Mo</div>
+            <div class="text-center text-xs text-white/30 py-1">Tu</div>
+            <div class="text-center text-xs text-white/30 py-1">We</div>
+            <div class="text-center text-xs text-white/30 py-1">Th</div>
+            <div class="text-center text-xs text-white/30 py-1">Fr</div>
+            <div class="text-center text-xs text-white/30 py-1">Sa</div>
+          </div>
+          <div class="grid grid-cols-7 gap-1" id="calGrid"><!-- JS --></div>
+        </div>
+
+        <!-- Upcoming Events -->
+        <div class="card p-5">
+          <h3 class="font-semibold text-white text-sm mb-4">Upcoming Events</h3>
+          <div class="space-y-3" id="upcomingEvents"><!-- JS --></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         SECTION: FACULTY DIRECTORY
+    ════════════════════════════════════════ -->
+    <div id="section-faculty" class="section">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <h2 class="text-lg font-bold text-white">Faculty Directory</h2>
+        <div class="flex flex-wrap gap-2">
+          <input class="fms-input text-sm py-2" placeholder="Search name…" id="facultySearch" oninput="filterFaculty()"/>
+          <select class="fms-input text-sm py-2" id="deptFilter" onchange="filterFaculty()">
+            <option value="">All Departments</option>
+            <option>CS</option><option>IT</option><option>ME</option>
+            <option>CE</option><option>EE</option><option>ECE</option>
+          </select>
+          <select class="fms-input text-sm py-2" id="roleFilter" onchange="filterFaculty()">
+            <option value="">All Roles</option>
+            <option>Professor</option><option>Associate Professor</option>
+            <option>Assistant Professor</option><option>Guest Lecturer</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Org Tree -->
+      <div class="card p-5 mb-5">
+        <h3 class="font-semibold text-white text-sm mb-4">University Hierarchy</h3>
+        <div class="overflow-x-auto py-2">
+          <div class="flex flex-col items-center gap-0">
+            <div class="org-node bg-gradient-to-r from-violet-600/30 to-purple-600/30 border-violet-500/50 font-semibold">
+              🏛️ Chancellor
+            </div>
+            <div class="org-connector h-6 w-px"></div>
+            <div class="org-node">🎓 Vice Chancellor</div>
+            <div class="org-connector h-6 w-px"></div>
+            <div class="org-node">👔 Dean of Academics</div>
+            <div class="org-connector h-6 w-px"></div>
+            <!-- HODs row -->
+            <div class="flex flex-wrap gap-3 justify-center">
+              <div class="flex flex-col items-center">
+                <div class="org-connector h-6 w-px"></div>
+                <div class="org-node">HOD — CS</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="org-connector h-6 w-px"></div>
+                <div class="org-node">HOD — IT</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="org-connector h-6 w-px"></div>
+                <div class="org-node">HOD — ME</div>
+              </div>
+              <div class="flex flex-col items-center">
+                <div class="org-connector h-6 w-px"></div>
+                <div class="org-node">HOD — CE</div>
+              </div>
+            </div>
+            <div class="text-xs text-white/30 mt-3">↓ Professors → Associate Professors → Assistant Professors → Guest Lecturers</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Faculty Data Grid -->
+      <div class="card p-5">
+        <div class="overflow-x-auto">
+          <table class="fms-table">
+            <thead><tr>
+              <th>Employee</th><th>Name</th><th>Department</th>
+              <th>Designation</th><th>Experience</th><th>Publications</th>
+              <th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="facultyTableBody"><!-- JS --></tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between mt-4 text-sm text-white/40">
+          <span id="facultyCount">Showing 10 of 142 faculty members</span>
+          <div class="flex gap-1">
+            <button class="px-3 py-1 rounded-lg hover:bg-white/5 transition-colors">← Prev</button>
+            <button class="px-3 py-1 rounded-lg bg-purple-500/20 text-purple-300">1</button>
+            <button class="px-3 py-1 rounded-lg hover:bg-white/5 transition-colors">2</button>
+            <button class="px-3 py-1 rounded-lg hover:bg-white/5 transition-colors">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         SECTION: PAYROLL
+    ════════════════════════════════════════ -->
+    <div id="section-payroll" class="section">
+      <h2 class="text-lg font-bold text-white mb-5">Payroll & Salary Management</h2>
+
+      <!-- Summary KPIs -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+        <div class="card p-5 lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-white text-sm">Monthly Payroll Trend</h3>
+            <select class="fms-input text-xs py-1.5">
+              <option>2025–2026</option><option>2024–2025</option>
+            </select>
+          </div>
+          <div class="h-52"><canvas id="payrollTrendChart"></canvas></div>
+        </div>
+
+        <div class="card p-5">
+          <h3 class="font-semibold text-white text-sm mb-4">Payroll Summary</h3>
+          <div class="space-y-3" id="payrollSummary"><!-- JS --></div>
+        </div>
+      </div>
+
+      <!-- Payroll table -->
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-white text-sm">Faculty Payroll — September 2026</h3>
+          <div class="flex gap-2">
+            <button class="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 text-sm hover:bg-purple-500/30 transition-colors">Generate Slips</button>
+            <button class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-sm hover:bg-emerald-500/30 transition-colors">Export Excel</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="fms-table">
+            <thead><tr>
+              <th>Employee</th><th>Designation</th><th>Basic</th><th>HRA</th>
+              <th>DA</th><th>Gross</th><th>PF Dedn</th><th>TDS</th><th>Net Pay</th><th>Status</th>
+            </tr></thead>
+            <tbody id="payrollTableBody"><!-- JS --></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         SECTION: TASKS
+    ════════════════════════════════════════ -->
+    <div id="section-tasks" class="section">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-lg font-bold text-white">Tasks & To-Do</h2>
+        <button onclick="addTask()"
+          class="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm font-medium hover:bg-purple-500/30 transition-all">
+          + New Task
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="card p-5" id="taskColPending">
+          <h3 class="font-semibold text-white text-sm mb-4 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Pending
+          </h3>
+          <div class="space-y-3" id="tasksPending"><!-- JS --></div>
+        </div>
+        <div class="card p-5" id="taskColProgress">
+          <h3 class="font-semibold text-white text-sm mb-4 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span> In Progress
+          </h3>
+          <div class="space-y-3" id="tasksInProgress"><!-- JS --></div>
+        </div>
+        <div class="card p-5" id="taskColDone">
+          <h3 class="font-semibold text-white text-sm mb-4 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Completed
+          </h3>
+          <div class="space-y-3" id="tasksDone"><!-- JS --></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         SECTION: REPORTS
+    ════════════════════════════════════════ -->
+    <div id="section-reports" class="section">
+      <h2 class="text-lg font-bold text-white mb-5">Reports & Exports</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Report cards -->
+        <div class="card p-5 hover:border-purple-500/40 transition-colors cursor-pointer" onclick="generateReport('attendance')">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center mb-3">
+            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-white text-sm mb-1">Attendance Report</h3>
+          <p class="text-xs text-white/40">Monthly faculty attendance register with summary</p>
+          <div class="flex gap-2 mt-3">
+            <span class="badge badge-low">PDF</span>
+            <span class="badge badge-low">CSV</span>
+            <span class="badge badge-low">Excel</span>
+          </div>
+        </div>
+
+        <div class="card p-5 hover:border-purple-500/40 transition-colors cursor-pointer" onclick="generateReport('payroll')">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-3">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-white text-sm mb-1">Payroll Report</h3>
+          <p class="text-xs text-white/40">Monthly salary slips and payout logs</p>
+          <div class="flex gap-2 mt-3">
+            <span class="badge badge-low">PDF</span>
+            <span class="badge badge-low">Excel</span>
+          </div>
+        </div>
+
+        <div class="card p-5 hover:border-purple-500/40 transition-colors cursor-pointer" onclick="generateReport('naac')">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center mb-3">
+            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-white text-sm mb-1">NBA / NAAC Audit Report</h3>
+          <p class="text-xs text-white/40">Faculty workload & accreditation data</p>
+          <div class="flex gap-2 mt-3">
+            <span class="badge badge-low">PDF</span>
+          </div>
+        </div>
+
+        <div class="card p-5 hover:border-purple-500/40 transition-colors cursor-pointer" onclick="generateReport('workload')">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center mb-3">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-white text-sm mb-1">Faculty Workload Report</h3>
+          <p class="text-xs text-white/40">Lecture hours, subjects and workload analysis</p>
+          <div class="flex gap-2 mt-3">
+            <span class="badge badge-low">PDF</span>
+            <span class="badge badge-low">CSV</span>
+          </div>
+        </div>
+
+        <div class="card p-5 hover:border-purple-500/40 transition-colors cursor-pointer" onclick="generateReport('leave')">
+          <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center mb-3">
+            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-white text-sm mb-1">Leave Summary Report</h3>
+          <p class="text-xs text-white/40">Leave utilisation and balance report</p>
+          <div class="flex gap-2 mt-3">
+            <span class="badge badge-low">PDF</span>
+            <span class="badge badge-low">Excel</span>
+          </div>
+        </div>
+
+        <div class="card p-5 hover:border-purple-500/40 transition-colors cursor-pointer" onclick="generateReport('research')">
+          <div class="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center mb-3">
+            <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-white text-sm mb-1">Research & Publications</h3>
+          <p class="text-xs text-white/40">Faculty publications, patents and FDP details</p>
+          <div class="flex gap-2 mt-3">
+            <span class="badge badge-low">PDF</span>
+            <span class="badge badge-low">CSV</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page content -->
+</div><!-- /main -->
+
+<!-- ════════════════════════════════════════
+     MODALS
+════════════════════════════════════════ -->
+
+<!-- Leave Apply Modal -->
+<div id="leaveModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="card w-full max-w-md mx-4 p-6" style="border-color:rgba(139,92,246,0.3)">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-bold text-white">Apply for Leave</h3>
+      <button onclick="closeLeaveModal()" class="text-white/40 hover:text-white transition-colors">✕</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs text-white/50 mb-1.5">Leave Type</label>
+        <select class="fms-input w-full">
+          <option>Casual Leave (CL)</option>
+          <option>Earned Leave (EL)</option>
+          <option>Duty Leave (DL)</option>
+          <option>Medical Leave (ML)</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-white/50 mb-1.5">From Date</label>
+          <input type="date" class="fms-input w-full"/>
+        </div>
+        <div>
+          <label class="block text-xs text-white/50 mb-1.5">To Date</label>
+          <input type="date" class="fms-input w-full"/>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-white/50 mb-1.5">Reason</label>
+        <textarea rows="3" class="fms-input w-full resize-none" placeholder="Provide reason for leave…"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs text-white/50 mb-1.5">Supporting Document (optional)</label>
+        <input type="file" class="fms-input w-full text-xs" accept=".pdf,.jpg,.png"/>
+      </div>
+      <button class="btn-primary w-full py-3 rounded-xl text-white font-semibold text-sm"
+              style="background:linear-gradient(135deg,#8b5cf6,#6366f1)">
+        Submit Leave Request
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Announcement Modal -->
+<div id="noticeModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="card w-full max-w-md mx-4 p-6" style="border-color:rgba(245,158,11,0.3)">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-bold text-white">Post Announcement</h3>
+      <button onclick="closeNoticeModal()" class="text-white/40 hover:text-white transition-colors">✕</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs text-white/50 mb-1.5">Title</label>
+        <input type="text" class="fms-input w-full" placeholder="Announcement title…"/>
+      </div>
+      <div>
+        <label class="block text-xs text-white/50 mb-1.5">Category</label>
+        <select class="fms-input w-full">
+          <option>General</option><option>Exam</option><option>Research</option>
+          <option>Achievement</option><option>Circular</option><option>Urgent</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-white/50 mb-1.5">Target Audience</label>
+        <select class="fms-input w-full">
+          <option>All Faculty</option><option>Dean</option><option>HOD</option>
+          <option>Professor</option><option>Guest Lecturer</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-white/50 mb-1.5">Message</label>
+        <textarea rows="4" class="fms-input w-full resize-none" placeholder="Write your announcement…"></textarea>
+      </div>
+      <button class="punch-btn punch-in w-full"
+              style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+        Publish Announcement
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════ -->
+<script>
+// ═══════════════════════════════════════
+// INIT & GREETING
+// ═══════════════════════════════════════
+const userName  = localStorage.getItem('fms_user_name') || 'Dr. Amit Sharma';
+const userRole  = localStorage.getItem('fms_user_role') || 'PROFESSOR';
+const userEmail = localStorage.getItem('fms_user_email') || '';
+
+function initGreeting() {
+  const h    = new Date().getHours();
+  let prefix = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+  document.getElementById('greetingTime').textContent = prefix + ', ' + userName + '! Welcome back.';
+  document.getElementById('greetingName').textContent = prefix + ', ' + userName.split(' ')[0] + ' 👋';
+  document.getElementById('greetingRole').textContent = userRole.replace('_', ' ');
+  document.getElementById('sidebarUserName').textContent = userName;
+  document.getElementById('sidebarUserRole').textContent = userRole;
+  const initials = userName.split(' ').slice(-2).map(n=>n[0]).join('').toUpperCase();
+  document.getElementById('avatarInitials').textContent  = initials;
+  document.getElementById('topbarAvatar').textContent    = initials;
+}
+initGreeting();
+
+// Auth guard
+if (!localStorage.getItem('fms_access_token')) window.location.href = 'login.html';
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  document.getElementById('breadcrumb').textContent =
+    name.charAt(0).toUpperCase() + name.slice(1).replace('-',' ');
+}
+
+let sidebarOpen = true;
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  const sb = document.getElementById('sidebar');
+  const mn = document.getElementById('main');
+  if (window.innerWidth > 768) {
+    sb.classList.toggle('collapsed', !sidebarOpen);
+    mn.style.marginLeft = sidebarOpen ? '260px' : '0';
+  } else {
+    sb.classList.toggle('open', sidebarOpen);
+  }
+}
+
+function toggleLangDropdown() {
+  document.getElementById('langDropdown').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.relative')) {
+    document.getElementById('langDropdown').classList.remove('open');
+  }
+});
+function setLang(code, label) {
+  document.getElementById('currentLang').textContent = label;
+  document.getElementById('langDropdown').classList.remove('open');
+  localStorage.setItem('fms_lang', code);
+}
+
+function handleLogout() {
+  if (confirm('Are you sure you want to log out?')) {
+    localStorage.clear();
+    window.location.href = 'login.html';
+  }
+}
+
+// ═══════════════════════════════════════
+// DEMO DATA
+// ═══════════════════════════════════════
+const demoFaculty = [
+  { id:1, emp:'EMP001', name:'Dr. Amit Sharma',     dept:'CS', role:'Professor',           exp:'14 yrs', pubs:22, status:'Active' },
+  { id:2, emp:'EMP002', name:'Dr. Priya Nair',      dept:'CS', role:'Associate Professor', exp:'9 yrs',  pubs:14, status:'Active' },
+  { id:3, emp:'EMP003', name:'Prof. Rahul Mehta',   dept:'IT', role:'Assistant Professor', exp:'6 yrs',  pubs:8,  status:'Active' },
+  { id:4, emp:'EMP004', name:'Dr. Sunita Kulkarni', dept:'ME', role:'Professor',           exp:'18 yrs', pubs:31, status:'Active' },
+  { id:5, emp:'EMP005', name:'Dr. Vijay Patil',     dept:'EE', role:'Associate Professor', exp:'11 yrs', pubs:17, status:'Active' },
+  { id:6, emp:'EMP006', name:'Ms. Anjali Desai',    dept:'IT', role:'Assistant Professor', exp:'3 yrs',  pubs:4,  status:'Active' },
+  { id:7, emp:'EMP007', name:'Dr. Kiran Shah',      dept:'CE', role:'Professor',           exp:'21 yrs', pubs:39, status:'On Leave' },
+  { id:8, emp:'EMP008', name:'Prof. Rohan Joshi',   dept:'ECE',role:'Guest Lecturer',      exp:'2 yrs',  pubs:2,  status:'Active' },
+  { id:9, emp:'EMP009', name:'Dr. Meena Iyer',      dept:'CS', role:'Associate Professor', exp:'12 yrs', pubs:19, status:'Active' },
+  { id:10,emp:'EMP010', name:'Prof. Sanjay Rao',    dept:'MBA',role:'Assistant Professor', exp:'7 yrs',  pubs:6,  status:'Active' },
+];
+
+const demoAttendance = [
+  { date:'03 Sep 2026', name:'Dr. Amit Sharma',     ci:'08:45 AM', co:'05:30 PM', hrs:'8h 45m', status:'PRESENT' },
+  { date:'03 Sep 2026', name:'Dr. Priya Nair',      ci:'09:10 AM', co:'04:50 PM', hrs:'7h 40m', status:'PRESENT' },
+  { date:'03 Sep 2026', name:'Prof. Rahul Mehta',   ci:'—',        co:'—',        hrs:'—',      status:'ON_DUTY' },
+  { date:'03 Sep 2026', name:'Dr. Sunita Kulkarni', ci:'—',        co:'—',        hrs:'—',      status:'ABSENT'  },
+  { date:'02 Sep 2026', name:'Dr. Vijay Patil',     ci:'08:55 AM', co:'05:00 PM', hrs:'8h 05m', status:'PRESENT' },
+];
+
+const demoTasks = {
+  pending: [
+    { title:'Grade Mid-Term Papers – CS401', priority:'HIGH',   due:'Sep 06, 2026' },
+    { title:'Submit Research Paper Draft',   priority:'MEDIUM', due:'Sep 10, 2026' },
+    { title:'Prepare FDP Schedule',          priority:'LOW',    due:'Sep 15, 2026' },
+  ],
+  inProgress: [
+    { title:'Syllabus Completion – CS301',   priority:'HIGH',   due:'Sep 04, 2026' },
+    { title:'NBA Accreditation Data Entry',  priority:'HIGH',   due:'Sep 07, 2026' },
+  ],
+  done: [
+    { title:'Upload Question Paper – CS201', priority:'MEDIUM', due:'Sep 01, 2026' },
+    { title:'Mark Attendance – Aug Week 4',  priority:'LOW',    due:'Sep 01, 2026' },
+  ]
+};
+
+const demoPayroll = [
+  { emp:'EMP001', name:'Dr. Amit Sharma',     desgn:'Professor',           basic:'₹1,20,000', hra:'₹36,000', da:'₹20,400', gross:'₹1,83,500', pf:'₹14,400', tds:'₹18,200', net:'₹1,50,900', status:'PAID'    },
+  { emp:'EMP002', name:'Dr. Priya Nair',      desgn:'Associate Professor', basic:'₹90,000',   hra:'₹24,300', da:'₹15,300', gross:'₹1,35,900', pf:'₹10,800', tds:'₹12,100', net:'₹1,13,000', status:'PAID'    },
+  { emp:'EMP003', name:'Prof. Rahul Mehta',   desgn:'Asst. Professor',     basic:'₹65,000',   hra:'₹15,600', da:'₹11,050', gross:'₹94,150',   pf:'₹7,800',  tds:'₹7,500',  net:'₹78,850',   status:'PENDING' },
+  { emp:'EMP004', name:'Dr. Sunita Kulkarni', desgn:'Professor',           basic:'₹1,20,000', hra:'₹36,000', da:'₹20,400', gross:'₹1,83,500', pf:'₹14,400', tds:'₹18,200', net:'₹1,50,900', status:'PAID'    },
+  { emp:'EMP005', name:'Dr. Vijay Patil',     desgn:'Associate Professor', basic:'₹90,000',   hra:'₹24,300', da:'₹15,300', gross:'₹1,35,900', pf:'₹10,800', tds:'₹12,100', net:'₹1,13,000', status:'HELD'    },
+];
+
+const demoLeaves = [
+  { faculty:'Dr. Kiran Shah',   type:'Medical Leave',  from:'Sep 04', to:'Sep 08', days:5, reason:'Post-surgery recovery' },
+  { faculty:'Ms. Anjali Desai', type:'Casual Leave',   from:'Sep 10', to:'Sep 11', days:2, reason:'Personal work' },
+  { faculty:'Prof. Rohan Joshi',type:'Duty Leave',     from:'Sep 12', to:'Sep 14', days:3, reason:'IEEE Conference, Pune' },
+];
+
+const demoEvents = [
+  { date:'Sep 5',  type:'EXAM',    title:'Mid-Term Exam – CS Dept',     color:'#ef4444' },
+  { date:'Sep 8',  type:'FDP',     title:'Faculty Dev. Program – AI/ML', color:'#8b5cf6' },
+  { date:'Sep 10', type:'HOLIDAY', title:'Ganesh Chaturthi',             color:'#f59e0b' },
+  { date:'Sep 15', type:'SEMINAR', title:'Research Symposium 2026',      color:'#10b981' },
+  { date:'Sep 20', type:'DEADLINE',title:'NBA Data Submission Deadline', color:'#f97316' },
+  { date:'Sep 25', type:'WORKSHOP',title:'Python Workshop – IT Dept',    color:'#3b82f6' },
+];
+
+const demoNotices = [
+  { badge:'URGENT',   title:'NBA Audit Submission Deadline',   body:'All departments must submit audit data by Sep 20, 2026.',  time:'2h ago' },
+  { badge:'EXAM',     title:'Mid-Semester Exam Timetable',     body:'CS/IT department exam schedule has been published.',       time:'1d ago' },
+  { badge:'RESEARCH', title:'Research Grant Sanctioned',       body:'SERB grant ₹12L approved for CS department research.',    time:'2d ago' },
+  { badge:'GENERAL',  title:'Faculty Development Programme',   body:'FDP on AI/ML tools is scheduled for Sep 8–10, 2026.',     time:'3d ago' },
+];
+
+const demoActivity = [
+  { icon:'🎓', text:'Dr. Sunita Kulkarni published new paper in IEEE Transactions', time:'1h ago' },
+  { icon:'📋', text:'Leave request by Dr. Kiran Shah approved by HOD-ME', time:'3h ago' },
+  { icon:'💰', text:'September 2026 payroll processing initiated', time:'5h ago' },
+  { icon:'📢', text:'Circular: NAAC peer team visit scheduled for Oct 2026', time:'1d ago' },
+  { icon:'🔬', text:'Lab maintenance budget ₹2.5L released — CS Dept', time:'2d ago' },
+];
+
+const syllabus = [
+  { subject:'CS301 — Data Structures',       pct:72, color:'#8b5cf6' },
+  { subject:'CS401 — Operating Systems',     pct:58, color:'#6366f1' },
+  { subject:'CS501 — Machine Learning',      pct:45, color:'#10b981' },
+  { subject:'CS601 — Computer Networks',     pct:88, color:'#f59e0b' },
+];
+
+// ═══════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════
+
+// Syllabus progress bars
+function renderSyllabus() {
+  const el = document.getElementById('syllabusProgress');
+  el.innerHTML = syllabus.map(s => `
+    <div>
+      <div class="flex justify-between text-xs mb-1.5">
+        <span class="text-white/70">${s.subject}</span>
+        <span class="font-bold" style="color:${s.color}">${s.pct}%</span>
+      </div>
+      <div class="progress-bar h-2">
+        <div class="progress-fill" style="width:${s.pct}%;background:linear-gradient(90deg,${s.color}cc,${s.color})"></div>
+      </div>
+    </div>`).join('');
+}
+
+// Notice board
+function renderNotices() {
+  const badgeMap = { URGENT:'badge-high', EXAM:'badge-medium', RESEARCH:'badge-pending', GENERAL:'badge-low' };
+  document.getElementById('noticeList').innerHTML = demoNotices.map(n => `
+    <div class="flex gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="badge ${badgeMap[n.badge] || 'badge-low'}">${n.badge}</span>
+          <span class="text-xs text-white/30">${n.time}</span>
+        </div>
+        <p class="text-sm font-medium text-white truncate">${n.title}</p>
+        <p class="text-xs text-white/45 mt-0.5 truncate">${n.body}</p>
+      </div>
+    </div>`).join('');
+}
+
+// Activity stream
+function renderActivity() {
+  document.getElementById('activityStream').innerHTML = demoActivity.map(a => `
+    <div class="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors">
+      <span class="text-lg flex-shrink-0">${a.icon}</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs text-white/70 leading-relaxed">${a.text}</p>
+        <p class="text-xs text-white/30 mt-0.5">${a.time}</p>
+      </div>
+    </div>`).join('');
+}
+
+// Faculty table
+let facultyData = [...demoFaculty];
+function renderFacultyTable(data) {
+  const statusBadge = s => s === 'Active' ?
+    '<span class="badge badge-present">Active</span>' :
+    '<span class="badge badge-leave">On Leave</span>';
+
+  document.getElementById('facultyTableBody').innerHTML = data.map(f => `
+    <tr>
+      <td><span class="text-purple-400 font-mono text-xs">${f.emp}</span></td>
+      <td>
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            ${f.name.split(' ').slice(-1)[0][0]}${f.name[0]}
+          </div>
+          <span class="font-medium text-white">${f.name}</span>
+        </div>
+      </td>
+      <td><span class="text-white/60">${f.dept}</span></td>
+      <td><span class="text-white/80 text-xs">${f.role}</span></td>
+      <td><span class="text-white/50">${f.exp}</span></td>
+      <td><span class="text-white/60">${f.pubs}</span></td>
+      <td>${statusBadge(f.status)}</td>
+      <td>
+        <div class="flex gap-1.5">
+          <button class="px-2.5 py-1 rounded-lg text-xs bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 transition-colors">View</button>
+          <button class="px-2.5 py-1 rounded-lg text-xs bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors">Edit</button>
+        </div>
+      </td>
+    </tr>`).join('');
+  document.getElementById('facultyCount').textContent = `Showing ${data.length} of 142 faculty members`;
+}
+
+function filterFaculty() {
+  const q    = document.getElementById('facultySearch').value.toLowerCase();
+  const dept = document.getElementById('deptFilter').value;
+  const role = document.getElementById('roleFilter').value;
+  renderFacultyTable(demoFaculty.filter(f =>
+    (!q    || f.name.toLowerCase().includes(q)) &&
+    (!dept || f.dept === dept) &&
+    (!role || f.role === role)
+  ));
+}
+
+// Attendance table
+function renderAttendanceTable() {
+  const statusMap = {
+    PRESENT: '<span class="badge badge-present">Present</span>',
+    ABSENT:  '<span class="badge badge-absent">Absent</span>',
+    ON_DUTY: '<span class="badge badge-leave">On Duty</span>',
+    LATE:    '<span class="badge badge-medium">Late</span>',
+    HOLIDAY: '<span class="badge badge-low">Holiday</span>',
+  };
+  document.getElementById('attendanceTableBody').innerHTML = demoAttendance.map(a => `
+    <tr>
+      <td class="text-white/50 text-xs">${a.date}</td>
+      <td class="font-medium text-white">${a.name}</td>
+      <td class="text-white/60">${a.ci}</td>
+      <td class="text-white/60">${a.co}</td>
+      <td class="text-white/60">${a.hrs}</td>
+      <td>${statusMap[a.status] || a.status}</td>
+    </tr>`).join('');
+}
+
+// Leave balance cards
+function renderLeaveBalance() {
+  const cards = [
+    { type:'Casual Leave',  used:3,  max:12, color:'#8b5cf6' },
+    { type:'Earned Leave',  used:8,  max:30, color:'#10b981' },
+    { type:'Duty Leave',    used:2,  max:15, color:'#3b82f6' },
+    { type:'Medical Leave', used:0,  max:15, color:'#f59e0b' },
+  ];
+  document.getElementById('leaveBalanceCards').innerHTML = cards.map(c => `
+    <div class="card p-4">
+      <p class="text-xs text-white/50 mb-1">${c.type}</p>
+      <div class="flex items-end gap-1 mb-2">
+        <span class="text-2xl font-bold text-white">${c.max - c.used}</span>
+        <span class="text-white/40 text-sm mb-0.5">/ ${c.max} days</span>
+      </div>
+      <div class="progress-bar h-1.5">
+        <div class="progress-fill" style="width:${(c.used/c.max)*100}%;background:${c.color}"></div>
+      </div>
+      <p class="text-xs text-white/30 mt-1">${c.used} used</p>
+    </div>`).join('');
+}
+
+// Pending leaves table
+function renderPendingLeaves() {
+  document.getElementById('pendingLeavesTable').innerHTML = demoLeaves.map(l => `
+    <tr>
+      <td class="font-medium text-white">${l.faculty}</td>
+      <td><span class="badge badge-pending">${l.type}</span></td>
+      <td class="text-white/60">${l.from}</td>
+      <td class="text-white/60">${l.to}</td>
+      <td class="text-white/60">${l.days}</td>
+      <td class="text-white/50 text-xs max-w-xs truncate">${l.reason}</td>
+      <td>
+        <div class="flex gap-1.5">
+          <button class="px-2.5 py-1 rounded-lg text-xs bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors">✓ Approve</button>
+          <button class="px-2.5 py-1 rounded-lg text-xs bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors">✕ Reject</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// Payroll table
+function renderPayrollTable() {
+  const statusMap = {
+    PAID:    '<span class="badge badge-present">Paid</span>',
+    PENDING: '<span class="badge badge-medium">Pending</span>',
+    HELD:    '<span class="badge badge-high">Held</span>',
+  };
+  document.getElementById('payrollTableBody').innerHTML = demoPayroll.map(p => `
+    <tr>
+      <td>
+        <div>
+          <p class="font-medium text-white text-xs">${p.name}</p>
+          <p class="text-white/40 text-xs">${p.emp}</p>
+        </div>
+      </td>
+      <td class="text-white/60 text-xs">${p.desgn}</td>
+      <td class="text-white/70">${p.basic}</td>
+      <td class="text-white/60">${p.hra}</td>
+      <td class="text-white/60">${p.da}</td>
+      <td class="text-white font-medium">${p.gross}</td>
+      <td class="text-red-400/80">${p.pf}</td>
+      <td class="text-red-400/80">${p.tds}</td>
+      <td class="text-emerald-400 font-bold">${p.net}</td>
+      <td>${statusMap[p.status]}</td>
+    </tr>`).join('');
+}
+
+// Payroll summary
+function renderPayrollSummary() {
+  const items = [
+    { label:'Total Gross Payroll', val:'₹7,32,950', color:'text-white' },
+    { label:'Total Deductions',    val:'₹1,06,500', color:'text-red-400' },
+    { label:'Net Payroll (Sep)',   val:'₹6,26,450', color:'text-emerald-400' },
+    { label:'Research Stipends',   val:'₹48,000',   color:'text-blue-400' },
+    { label:'Pending Slips',       val:'2',          color:'text-amber-400' },
+  ];
+  document.getElementById('payrollSummary').innerHTML = items.map(i => `
+    <div class="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+      <span class="text-xs text-white/50">${i.label}</span>
+      <span class="text-sm font-semibold ${i.color}">${i.val}</span>
+    </div>`).join('');
+}
+
+// Tasks kanban
+function renderTasks() {
+  const taskCard = (t, status) => `
+    <div class="p-3.5 rounded-xl" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <p class="text-sm text-white/85 font-medium leading-snug flex-1">${t.title}</p>
+        <span class="badge ${t.priority==='HIGH'?'badge-high':t.priority==='MEDIUM'?'badge-medium':'badge-low'} flex-shrink-0">${t.priority}</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-white/35">Due: ${t.due}</span>
+        <button class="text-xs text-white/30 hover:text-purple-400 transition-colors">⋯</button>
+      </div>
+    </div>`;
+  document.getElementById('tasksPending').innerHTML    = demoTasks.pending.map(t => taskCard(t,'pending')).join('');
+  document.getElementById('tasksInProgress').innerHTML = demoTasks.inProgress.map(t => taskCard(t,'in-progress')).join('');
+  document.getElementById('tasksDone').innerHTML       = demoTasks.done.map(t => taskCard(t,'done')).join('');
+}
+
+// Upcoming events
+function renderEvents() {
+  const typeColor = { EXAM:'bg-red-500/15 text-red-400', FDP:'bg-purple-500/15 text-purple-400',
+    HOLIDAY:'bg-amber-500/15 text-amber-400', SEMINAR:'bg-emerald-500/15 text-emerald-400',
+    DEADLINE:'bg-orange-500/15 text-orange-400', WORKSHOP:'bg-blue-500/15 text-blue-400' };
+  document.getElementById('upcomingEvents').innerHTML = demoEvents.map(e => `
+    <div class="flex items-start gap-3 p-3 rounded-xl" style="background:rgba(255,255,255,0.04)">
+      <div class="text-center flex-shrink-0">
+        <p class="text-lg font-bold text-white leading-none">${e.date.split(' ')[1]}</p>
+        <p class="text-xs text-white/40">${e.date.split(' ')[0]}</p>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm text-white/85 font-medium leading-snug">${e.title}</p>
+        <span class="badge ${typeColor[e.type] || 'badge-low'} mt-1">${e.type}</span>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════
+let calYear = 2026, calMonth = 8; // Sep 2026 (0-indexed)
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const holidays = [10, 20]; // Sep 10 Ganesh Chaturthi, Sep 20 deadline marker
+const eventDays = [5, 8, 10, 15, 20, 25];
+
+function renderCalendar() {
+  document.getElementById('calTitle').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  const first   = new Date(calYear, calMonth, 1).getDay();
+  const days    = new Date(calYear, calMonth + 1, 0).getDate();
+  const today   = new Date();
+  let html = '';
+  for (let i = 0; i < first; i++) {
+    const prevDay = new Date(calYear, calMonth, -first + i + 1).getDate();
+    html += `<div class="cal-day other-month text-white/20">${prevDay}</div>`;
+  }
+  for (let d = 1; d <= days; d++) {
+    const isToday   = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+    const isHoliday = holidays.includes(d);
+    const hasEvent  = eventDays.includes(d);
+    html += `<div class="cal-day ${isToday?'today':''} ${isHoliday?'holiday':''} ${hasEvent?'has-event':''}">${d}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function calNav(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+// ═══════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════
+Chart.defaults.color = 'rgba(255,255,255,0.45)';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+
+function initCharts() {
+  // 1. Attendance Line Chart
+  const attCtx = document.getElementById('attendanceChart').getContext('2d');
+  window.attendanceChart = new Chart(attCtx, {
+    type: 'line',
+    data: {
+      labels: ['27 Aug','28 Aug','29 Aug','30 Aug','31 Aug','01 Sep','02 Sep','03 Sep'],
+      datasets: [
+        {
+          label: 'Present',
+          data: [115,112,118,120,117,114,119,118],
+          borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)',
+          borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 4,
+          pointBackgroundColor: '#10b981',
+        },
+        {
+          label: 'Absent',
+          data: [27,30,24,22,25,28,23,24],
+          borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.08)',
+          borderWidth: 2, fill: true, tension: 0.4, pointRadius: 4,
+          pointBackgroundColor: '#f87171',
+        }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{ position:'top', labels:{ boxWidth:12, padding:16 } } },
+      scales: {
+        x: { grid:{ display:false } },
+        y: { beginAtZero:true, grid:{ color:'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+
+  // 2. Dept Doughnut
+  const deptCtx = document.getElementById('deptChart').getContext('2d');
+  new Chart(deptCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['CS','IT','ME','CE','EE','ECE','MBA'],
+      datasets: [{
+        data: [28,22,18,16,20,24,14],
+        backgroundColor: ['#8b5cf6','#6366f1','#10b981','#f59e0b','#3b82f6','#f97316','#ec4899'],
+        borderWidth: 0, hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins: {
+        legend:{ position:'bottom', labels:{ boxWidth:10, padding:10, font:{size:11} } }
+      }
+    }
+  });
+
+  // 3. Salary Bar Chart
+  const salCtx = document.getElementById('salaryChart').getContext('2d');
+  new Chart(salCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Professor','Assoc. Prof','Asst. Prof','Guest Lect.'],
+      datasets: [{
+        label: 'Avg Monthly Gross (₹)',
+        data: [183500, 135900, 94150, 27500],
+        backgroundColor: ['rgba(139,92,246,0.7)','rgba(99,102,241,0.7)','rgba(16,185,129,0.7)','rgba(245,158,11,0.7)'],
+        borderRadius: 8, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales: {
+        x: { grid:{ display:false } },
+        y: {
+          grid:{ color:'rgba(255,255,255,0.05)' },
+          ticks:{ callback: v => '₹'+Math.round(v/1000)+'K' }
+        }
+      }
+    }
+  });
+
+  // 4. Attendance Pie (monthly)
+  const pieCtx = document.getElementById('attendancePieChart').getContext('2d');
+  new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Present','On Duty','Leave','Absent','Holiday'],
+      datasets:[{
+        data:[18,4,2,1,3],
+        backgroundColor:['#10b981','#3b82f6','#f59e0b','#ef4444','#6366f1'],
+        borderWidth:0, hoverOffset:4
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10,padding:8,font:{size:10} } } }
+    }
+  });
+
+  // 5. Payroll Trend
+  const payCtx = document.getElementById('payrollTrendChart').getContext('2d');
+  new Chart(payCtx, {
+    type:'bar',
+    data:{
+      labels:['Apr','May','Jun','Jul','Aug','Sep'],
+      datasets:[
+        { label:'Net Payroll (₹L)', data:[45.2,46.1,45.8,47.3,47.9,48.3],
+          backgroundColor:'rgba(139,92,246,0.6)', borderRadius:6, order:2 },
+        { label:'Gross (₹L)',       data:[54.8,55.6,55.2,57.0,58.1,58.6],
+          type:'line', borderColor:'#6366f1', backgroundColor:'transparent',
+          borderWidth:2.5, tension:0.4, pointRadius:4, order:1 }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ boxWidth:12,padding:16 } } },
+      scales:{
+        x:{ grid:{ display:false } },
+        y:{ grid:{ color:'rgba(255,255,255,0.05)' },
+            ticks:{ callback: v => '₹'+v+'L' } }
+      }
+    }
+  });
+}
+
+function setChartPeriod(period, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (window.attendanceChart) {
+    const data7d  = { labels:['27 Aug','28 Aug','29 Aug','30 Aug','31 Aug','01 Sep','02 Sep','03 Sep'],
+                      present:[115,112,118,120,117,114,119,118], absent:[27,30,24,22,25,28,23,24] };
+    const data30d = {
+      labels:['Aug 05','Aug 10','Aug 15','Aug 20','Aug 25','Aug 30','Sep 03'],
+      present:[108,115,112,119,118,114,118], absent:[34,27,30,23,24,28,24]
+    };
+    const d = period === '7d' ? data7d : data30d;
+    window.attendanceChart.data.labels         = d.labels;
+    window.attendanceChart.data.datasets[0].data = d.present;
+    window.attendanceChart.data.datasets[1].data = d.absent;
+    window.attendanceChart.update();
+  }
+}
+
+// ═══════════════════════════════════════
+// LECTURE PUNCH CLOCK
+// ═══════════════════════════════════════
+let punchStart = null, punchInterval = null;
+
+function punchIn() {
+  punchStart = Date.now();
+  document.getElementById('punchInBtn').disabled  = true;
+  document.getElementById('punchOutBtn').disabled = false;
+  document.getElementById('punchOutBtn').style.opacity = '1';
+  document.getElementById('punchInBtn').style.opacity  = '0.4';
+  document.getElementById('punchStatus').textContent   = 'In Session';
+  document.getElementById('punchClock').style.borderColor = '#10b981';
+  document.getElementById('punchDateLabel').textContent =
+    'Started: ' + new Date().toLocaleTimeString();
+
+  punchInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - punchStart) / 1000);
+    const h = String(Math.floor(elapsed/3600)).padStart(2,'0');
+    const m = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
+    const s = String(elapsed%60).padStart(2,'0');
+    document.getElementById('punchTime').textContent = `${h}:${m}:${s}`;
+  }, 1000);
+}
+
+function punchOut() {
+  clearInterval(punchInterval);
+  document.getElementById('punchInBtn').disabled  = false;
+  document.getElementById('punchOutBtn').disabled = true;
+  document.getElementById('punchOutBtn').style.opacity = '0.4';
+  document.getElementById('punchInBtn').style.opacity  = '1';
+  document.getElementById('punchStatus').textContent  = 'Session Ended';
+  document.getElementById('punchClock').style.borderColor = '#ef4444';
+  document.getElementById('punchDateLabel').textContent =
+    'Ended: ' + new Date().toLocaleTimeString();
+}
+
+// Set current date on attendance picker
+document.getElementById('attMonthPicker').value = '2026-09';
+document.getElementById('punchDateLabel').textContent =
+  new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+// ═══════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════
+function openLeaveModal() {
+  const m = document.getElementById('leaveModal');
+  m.classList.remove('hidden'); m.classList.add('flex');
+}
+function closeLeaveModal() {
+  const m = document.getElementById('leaveModal');
+  m.classList.add('hidden'); m.classList.remove('flex');
+}
+function showNoticeModal() {
+  const m = document.getElementById('noticeModal');
+  m.classList.remove('hidden'); m.classList.add('flex');
+}
+function closeNoticeModal() {
+  const m = document.getElementById('noticeModal');
+  m.classList.add('hidden'); m.classList.remove('flex');
+}
+
+// Close on backdrop click
+['leaveModal','noticeModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.add('hidden'); this.classList.remove('flex');
+    }
+  });
+});
+
+// ═══════════════════════════════════════
+// TASKS
+// ═══════════════════════════════════════
+function addTask() {
+  const title = prompt('Task title:');
+  if (!title) return;
+  demoTasks.pending.unshift({ title, priority:'MEDIUM', due:'TBD' });
+  renderTasks();
+}
+
+// ═══════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════
+function generateReport(type) {
+  const msgs = {
+    attendance: 'Generating Attendance Report (PDF/CSV/Excel)…',
+    payroll:    'Generating Payroll Report & Salary Slips (PDF/Excel)…',
+    naac:       'Generating NBA/NAAC Audit Report (PDF)…',
+    workload:   'Generating Faculty Workload Report…',
+    leave:      'Generating Leave Summary Report…',
+    research:   'Generating Research & Publications Report…',
+  };
+  alert(msgs[type] || 'Generating report…');
+}
+
+// ═══════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════
+(function init() {
+  renderSyllabus();
+  renderNotices();
+  renderActivity();
+  renderFacultyTable(demoFaculty);
+  renderAttendanceTable();
+  renderLeaveBalance();
+  renderPendingLeaves();
+  renderPayrollTable();
+  renderPayrollSummary();
+  renderTasks();
+  renderEvents();
+  renderCalendar();
+  initCharts();
+})();
+</script>
+</body>
+</html>

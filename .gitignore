@@ -1,0 +1,24 @@
+# ── Maven build output ─────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# ── IDE / OS ────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ── Spring Boot secrets ─────────────────────────────────────
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-prod.yml
+
+# ── Logs ────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Node (if added later) ───────────────────────────────────
+node_modules/
