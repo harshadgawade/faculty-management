@@ -1,0 +1,19 @@
+# Build output (re-built inside Docker)
+target/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

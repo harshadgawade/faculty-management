@@ -1,0 +1,16 @@
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+nginx.conf
