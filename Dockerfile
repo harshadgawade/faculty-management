@@ -9,7 +9,7 @@ COPY pom.xml .
 RUN mvn dependency:go-offline
 
 # 3. अब बाकी पूरा Java Source Code कॉपी करें
-COPY src ./src
+COPY src ./backend/src
 
 # 4. अब प्रोजेक्ट को बिल्ड करें (बिना री-डाउनलोड के बहुत तेज़ी से बिल्ड होगा)
 RUN mvn package -DskipTests
