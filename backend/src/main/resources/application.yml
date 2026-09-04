@@ -19,7 +19,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update      # schema managed by schema.sql
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -41,7 +41,7 @@ spring:
 
 # ── RapidAPI Configuration ─────────────────────────────────────────
 rapidapi:
-  key: d8c09ef7aemshfa431790f80a5a3p13182ejsn311e968e7f97
+  key: ${RAPIDAPI_KEY:d8c09ef7aemshfa431790f80a5a3p13182ejsn311e968e7f97}
   host: platzi-reviews1.p.rapidapi.com
   url: https://platzi-reviews1.p.rapidapi.com/graphql
 
@@ -57,7 +57,7 @@ app:
     length: 6
 
   cors:
-    allowed-origins: "http://localhost:3000,http://localhost:5500"
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5500,https://faculty-management-mojz.onrender.com}
 
 logging:
   level:
