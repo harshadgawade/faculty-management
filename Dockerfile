@@ -1,13 +1,11 @@
-FROM python:3.10-slim
+
+FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
-
-# 1. पहले सिर्फ requirements.txt लाएं
-COPY requirements.txt .
-
-# 2. हैवी पैकेजेस इंस्टॉल करें (यह कैश हो जाएगा)
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 3. अब बाकी Python फाइलें कॉपी करें
 COPY . .
+RUN mvn clean package -DskipTests
 
-CMD ["python", "main.py"]
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
