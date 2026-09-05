@@ -1,0 +1,37 @@
+services:
+
+  # ── Frontend (Nginx static site) ───────────────────────────
+  - type: web
+    name: faculty-management-mojz   # matches your existing Render service name
+    runtime: docker
+    dockerfilePath: ./Dockerfile    # root Dockerfile — serves frontend via Nginx
+    plan: free
+    envVars:
+      - key: PORT
+        value: 80
+
+  # ── Backend (Spring Boot) ───────────────────────────────────
+  - type: web
+    name: fms-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false                 # set manually in Render dashboard
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: JWT_SECRET
+        sync: false
+      - key: SPRING_MAIL_HOST
+        value: smtp.gmail.com
+      - key: SPRING_MAIL_PORT
+        value: "587"
+      - key: SPRING_MAIL_USERNAME
+        sync: false
+      - key: SPRING_MAIL_PASSWORD
+        sync: false
