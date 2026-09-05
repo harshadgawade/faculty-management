@@ -11,14 +11,9 @@ async function request(url, options = {}) {
         ...(options.headers || {})
     };
 
-    if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-    }
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const response = await fetch(`${API_BASE}${url}`, {
-        ...options,
-        headers
-    });
+    const response = await fetch(`${API_BASE}${url}`, { ...options, headers });
 
     if (response.status === 401 || response.status === 403) {
         localStorage.removeItem(TOKEN_KEY);
@@ -27,117 +22,87 @@ async function request(url, options = {}) {
         return;
     }
 
-    const contentType = response.headers.get("content-type");
-
-    let data;
-    if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-    } else {
-        data = await response.text();
-    }
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+        ? await response.json()
+        : await response.text();
 
     if (!response.ok) {
         throw new Error(
             typeof data === "object"
-                ? data.detail || data.message || "API request failed"
+                ? data.detail || data.message || data.error || "API request failed"
                 : data || "API request failed"
         );
     }
-
     return data;
 }
 
-
-// =========================
-// AUTH
-// =========================
-
 const Auth = {
-
     async sendOTP(email) {
         return request("/auth/send-otp", {
             method: "POST",
-            body: JSON.stringify({
-                email: email
-            })
+            body: JSON.stringify({ email })
         });
     },
 
     async verifyOTP(email, otp) {
         const data = await request("/auth/verify-otp", {
             method: "POST",
-            body: JSON.stringify({
-                email: email,
-                otp: otp
-            })
+            body: JSON.stringify({ email, otp })
         });
-
-        // JWT save
-        if (data.accessToken) {
-            localStorage.setItem(TOKEN_KEY, data.accessToken);
-        }
-
-        // User information save
-        if (data.user) {
+        if (data?.accessToken) localStorage.setItem(TOKEN_KEY, data.accessToken);
+        if (data?.user) {
             localStorage.setItem("user", JSON.stringify(data.user));
-        } else if (data.email || data.role || data.fullName) {
+        } else if (data?.email || data?.role || data?.fullName) {
             localStorage.setItem("user", JSON.stringify({
                 email: data.email,
                 role: data.role,
                 fullName: data.fullName
             }));
         }
-
         return data;
     },
 
     logout() {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem("user");
+        localStorage.removeItem("fms_user_name");
+        localStorage.removeItem("fms_user_role");
+        localStorage.removeItem("fms_user_email");
         window.location.href = "/login.html";
     },
 
-    isLoggedIn() {
-        return !!localStorage.getItem(TOKEN_KEY);
-    },
-
-    getToken() {
-        return localStorage.getItem(TOKEN_KEY);
-    },
-
+    isLoggedIn() { return !!localStorage.getItem(TOKEN_KEY); },
+    getToken() { return localStorage.getItem(TOKEN_KEY); },
     getUser() {
-        const user = localStorage.getItem("user");
-
         try {
+            const user = localStorage.getItem("user");
             return user ? JSON.parse(user) : null;
-        } catch (error) {
-            return null;
-        }
+        } catch (_) { return null; }
     }
 };
 
-
-// =========================
-// API
-// =========================
-
 const Api = {
-
-    // Dashboard
     dashboardStats() {
         return request("/dashboard/stats");
     },
 
-
-    // Faculty
     getFaculty(params = "") {
         return request(`/faculty${params}`);
     },
 
     createFaculty(faculty) {
+        const dto = { ...faculty };
+        if (!dto.roleId) {
+            const d = String(dto.designation || '').toLowerCase();
+            dto.roleId = d.includes('associate') ? '5'
+                : d.includes('assistant') ? '6'
+                : d.includes('guest') ? '7'
+                : '4';
+        }
         return request("/faculty", {
             method: "POST",
-            body: JSON.stringify(faculty)
+            body: JSON.stringify(dto)
         });
     },
 
@@ -149,13 +114,9 @@ const Api = {
     },
 
     deleteFaculty(id) {
-        return request(`/faculty/${id}`, {
-            method: "DELETE"
-        });
+        return request(`/faculty/${id}`, { method: "DELETE" });
     },
 
-
-    // Attendance
     markAttendance(data) {
         return request("/attendance", {
             method: "POST",
@@ -163,12 +124,22 @@ const Api = {
         });
     },
 
-    monthlyAttendance() {
-        return request("/attendance/monthly");
+    updateAttendance(id, data) {
+        return request(`/attendance/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data)
+        });
     },
 
+    monthlyAttendance(facultyId, year, month) {
+        const params = new URLSearchParams({
+            facultyId: String(facultyId),
+            year: String(year),
+            month: String(month)
+        });
+        return request(`/attendance/monthly?${params.toString()}`);
+    },
 
-    // Leave
     applyLeave(data) {
         return request("/leaves", {
             method: "POST",
@@ -176,24 +147,29 @@ const Api = {
         });
     },
 
-    pendingLeaves() {
-        return request("/leaves/pending");
+    getLeaves(facultyId, page = 0, size = 20) {
+        const params = new URLSearchParams({ facultyId: String(facultyId), page: String(page), size: String(size) });
+        return request(`/leaves?${params.toString()}`);
     },
 
-    approveLeave(id) {
+    pendingLeaves() {
+        return request("/leaves/pending?page=0&size=50");
+    },
+
+    approveLeave(id, remarks = null) {
         return request(`/leaves/${id}/approve`, {
-            method: "POST"
+            method: "POST",
+            body: remarks ? JSON.stringify({ remarks }) : undefined
         });
     },
 
-    rejectLeave(id) {
+    rejectLeave(id, remarks = null) {
         return request(`/leaves/${id}/reject`, {
-            method: "POST"
+            method: "POST",
+            body: remarks ? JSON.stringify({ remarks }) : undefined
         });
     }
 };
 
-
-// Make available globally
 window.Api = Api;
 window.Auth = Auth;
