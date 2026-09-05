@@ -2,9 +2,10 @@ services:
 
   # ── Frontend (Nginx static site) ───────────────────────────
   - type: web
-    name: faculty-management-mojz   # matches your existing Render service name
+    name: faculty-management-mojz
     runtime: docker
-    dockerfilePath: ./Dockerfile    # root Dockerfile — serves frontend via Nginx
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     plan: free
     envVars:
       - key: PORT
@@ -15,9 +16,9 @@ services:
     name: fms-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free
     envVars:
-      # ── Database (set manually in Render dashboard) ─────────
       - key: SPRING_DATASOURCE_URL
         sync: false
       - key: SPRING_DATASOURCE_USERNAME
@@ -26,17 +27,11 @@ services:
         sync: false
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
         value: update
-
-      # ── JWT ─────────────────────────────────────────────────
       - key: JWT_SECRET
         sync: false
-
-      # ── Mail — keys match application.yml (MAIL_USER / MAIL_PASS) ──
       - key: MAIL_USER
         sync: false
       - key: MAIL_PASS
         sync: false
-
-      # ── CORS — allow the frontend Render URL ────────────────
       - key: ALLOWED_ORIGINS
         value: https://faculty-management-mojz.onrender.com
