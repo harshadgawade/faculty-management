@@ -27,16 +27,21 @@ public class SignupController {
         String first = text(b,"firstName").trim();
         String last = text(b,"lastName").trim();
         String requestedRole = text(b,"role").trim().toUpperCase();
-        Long departmentId = number(b,"departmentId");
+        String departmentCode = text(b,"departmentCode").trim().toUpperCase();
         if (!INSTITUTE_EMAIL.matcher(email).matches()) throw new BadRequestException("Use @university.edu or @college.ac.in email.");
-        if (first.isBlank() || last.isBlank() || departmentId == null) throw new BadRequestException("Name and department are required.");
+        if (first.isBlank() || last.isBlank() || departmentCode.isBlank()) throw new BadRequestException("Name and department are required.");
         if (!requestedRole.equals("STUDENT") && !requestedRole.equals("TEACHER") && !requestedRole.equals("FACULTY")) {
             throw new BadRequestException("Select Student, Teacher or Faculty.");
         }
         Integer exists = jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE email=?", Integer.class, email);
         if (exists != null && exists > 0) throw new BadRequestException("Account already exists. Use Sign In.");
-        Integer deptCount = jdbc.queryForObject("SELECT COUNT(*) FROM departments WHERE id=?", Integer.class, departmentId);
-        if (deptCount == null || deptCount == 0) throw new BadRequestException("Selected department was not found.");
+        Long departmentId;
+        try {
+            departmentId = jdbc.queryForObject("SELECT id FROM departments WHERE UPPER(dept_code)=? LIMIT 1", Long.class, departmentCode);
+        } catch (Exception e) {
+            departmentId = null;
+        }
+        if (departmentId == null) throw new BadRequestException("Selected department was not found. Please refresh and select a department.");
 
         Long roleId = jdbc.queryForObject("SELECT id FROM roles WHERE UPPER(role_name)=? LIMIT 1", Long.class, requestedRole);
         if (roleId == null) throw new BadRequestException("The " + requestedRole + " role is not configured in the database.");
@@ -54,5 +59,4 @@ public class SignupController {
     }
 
     private static String text(Map<String,Object> b,String k){ Object v=b.get(k); return v==null?"":String.valueOf(v); }
-    private static Long number(Map<String,Object> b,String k){ Object v=b.get(k); if(v==null||String.valueOf(v).isBlank()) return null; return v instanceof Number n?n.longValue():Long.valueOf(String.valueOf(v)); }
 }
