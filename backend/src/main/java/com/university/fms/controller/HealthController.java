@@ -1,15 +1,20 @@
 package com.university.fms.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
+import java.util.Map;
+
 @RestController
-@RequestMapping
 public class HealthController {
 
     @GetMapping("/health")
-    public String checkHealth() {
-        return "Backend is Live and Running!";
+    public Map<String, Object> checkHealth() {
+        return Map.of(
+                "status", "UP",
+                "service", "fms-backend",
+                "timestamp", Instant.now().toString()
+        );
     }
 }
