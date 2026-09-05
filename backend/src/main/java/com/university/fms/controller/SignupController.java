@@ -26,22 +26,31 @@ public class SignupController {
         String email = text(b,"email").toLowerCase().trim();
         String first = text(b,"firstName").trim();
         String last = text(b,"lastName").trim();
+        String requestedRole = text(b,"role").trim().toUpperCase();
         Long departmentId = number(b,"departmentId");
         if (!INSTITUTE_EMAIL.matcher(email).matches()) throw new BadRequestException("Use @university.edu or @college.ac.in email.");
         if (first.isBlank() || last.isBlank() || departmentId == null) throw new BadRequestException("Name and department are required.");
+        if (!requestedRole.equals("STUDENT") && !requestedRole.equals("TEACHER") && !requestedRole.equals("FACULTY")) {
+            throw new BadRequestException("Select Student, Teacher or Faculty.");
+        }
         Integer exists = jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE email=?", Integer.class, email);
         if (exists != null && exists > 0) throw new BadRequestException("Account already exists. Use Sign In.");
         Integer deptCount = jdbc.queryForObject("SELECT COUNT(*) FROM departments WHERE id=?", Integer.class, departmentId);
         if (deptCount == null || deptCount == 0) throw new BadRequestException("Selected department was not found.");
-        Long roleId = jdbc.queryForObject("SELECT id FROM roles WHERE role_name NOT IN ('SUPER_ADMIN','DEAN','HOD') ORDER BY id LIMIT 1", Long.class);
-        if (roleId == null) throw new BadRequestException("No faculty role is configured.");
+
+        Long roleId = jdbc.queryForObject("SELECT id FROM roles WHERE UPPER(role_name)=? LIMIT 1", Long.class, requestedRole);
+        if (roleId == null) throw new BadRequestException("The " + requestedRole + " role is not configured in the database.");
+
         String passwordHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString());
         jdbc.update("INSERT INTO users(email,password_hash,role_id,is_active,is_email_verified,preferred_language) VALUES(?,?,?,1,0,'en')", email,passwordHash,roleId);
         Long userId = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long.class, email);
         String employeeCode = "NEW-" + userId;
+
         jdbc.update("INSERT INTO faculty_details(user_id,department_id,employee_code,first_name,last_name,designation,date_of_joining) VALUES(?,?,?,?,?,?,?)",
-                userId,departmentId,employeeCode,first,last,"Assistant Professor", LocalDate.now());
-        return ResponseEntity.ok(Map.of("message","Account created. Now use Sign In to receive your OTP.","email",email));
+                userId,departmentId,employeeCode,first,last,
+                requestedRole.equals("STUDENT") ? "Student" : requestedRole.equals("TEACHER") ? "Teacher" : "Faculty",
+                LocalDate.now());
+        return ResponseEntity.ok(Map.of("message","Account created as " + requestedRole + ". Now use Sign In and select the same role to receive your OTP.","email",email,"role",requestedRole));
     }
 
     private static String text(Map<String,Object> b,String k){ Object v=b.get(k); return v==null?"":String.valueOf(v); }
