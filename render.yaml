@@ -17,21 +17,26 @@ services:
     dockerfilePath: ./backend/Dockerfile
     plan: free
     envVars:
+      # ── Database (set manually in Render dashboard) ─────────
       - key: SPRING_DATASOURCE_URL
-        sync: false                 # set manually in Render dashboard
+        sync: false
       - key: SPRING_DATASOURCE_USERNAME
         sync: false
       - key: SPRING_DATASOURCE_PASSWORD
         sync: false
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
         value: update
+
+      # ── JWT ─────────────────────────────────────────────────
       - key: JWT_SECRET
         sync: false
-      - key: SPRING_MAIL_HOST
-        value: smtp.gmail.com
-      - key: SPRING_MAIL_PORT
-        value: "587"
-      - key: SPRING_MAIL_USERNAME
+
+      # ── Mail — keys match application.yml (MAIL_USER / MAIL_PASS) ──
+      - key: MAIL_USER
         sync: false
-      - key: SPRING_MAIL_PASSWORD
+      - key: MAIL_PASS
         sync: false
+
+      # ── CORS — allow the frontend Render URL ────────────────
+      - key: ALLOWED_ORIGINS
+        value: https://faculty-management-mojz.onrender.com

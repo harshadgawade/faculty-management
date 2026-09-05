@@ -246,7 +246,9 @@
 
   <script>
     // ── Config ──────────────────────────────────────────
-    const API_BASE   = 'http://localhost:8080/api';
+    // Use relative path so nginx proxies /api/ to the backend on Render.
+    // Falls back gracefully to demo mode if the backend is unreachable.
+    const API_BASE   = '/api';
     const OTP_EXPIRY = 60;
     let countdownTimer;
     let currentEmail = '';
