@@ -1,9 +1,10 @@
 // frontend/assets/js/api.js
 
 const API_BASE = "/api";
+const TOKEN_KEY = "fms_access_token";
 
 async function request(url, options = {}) {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem(TOKEN_KEY);
 
     const headers = {
         "Content-Type": "application/json",
@@ -20,7 +21,7 @@ async function request(url, options = {}) {
     });
 
     if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem("token");
+        localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem("user");
         window.location.href = "/login.html";
         return;
@@ -72,30 +73,36 @@ const Auth = {
         });
 
         // JWT save
-        if (data.token) {
-            localStorage.setItem("token", data.token);
+        if (data.accessToken) {
+            localStorage.setItem(TOKEN_KEY, data.accessToken);
         }
 
         // User information save
         if (data.user) {
             localStorage.setItem("user", JSON.stringify(data.user));
+        } else if (data.email || data.role || data.fullName) {
+            localStorage.setItem("user", JSON.stringify({
+                email: data.email,
+                role: data.role,
+                fullName: data.fullName
+            }));
         }
 
         return data;
     },
 
     logout() {
-        localStorage.removeItem("token");
+        localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem("user");
         window.location.href = "/login.html";
     },
 
     isLoggedIn() {
-        return !!localStorage.getItem("token");
+        return !!localStorage.getItem(TOKEN_KEY);
     },
 
     getToken() {
-        return localStorage.getItem("token");
+        return localStorage.getItem(TOKEN_KEY);
     },
 
     getUser() {
