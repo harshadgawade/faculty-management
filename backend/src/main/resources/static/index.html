@@ -1,1 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FMS — Faculty Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { font-family: 'Inter', sans-serif; }
 
+    /* ── Glassmorphism card ───────────────────────────── */
+    .glass {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+    }
+
+    /* ── Animated gradient background ─────────────────── */
+    .bg-anim {
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      background-size: 400% 400%;
+      animation: gradShift 12s ease infinite;
+    }
+    @keyframes gradShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ── Floating orbs ──────────────────────────────── */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      animation: float 8s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%,100% { transform: translateY(0px) scale(1); }
+      50%      { transform: translateY(-30px) scale(1.05); }
+    }
+
+    /* ── Input neumorphic-glass style ───────────────── */
+    .fms-input {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      transition: all 0.3s ease;
+    }
+    .fms-input:focus {
+      outline: none;
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(139,92,246,0.8);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.2);
+    }
+    .fms-input::placeholder { color: rgba(255,255,255,0.35); }
+
+    /* ── OTP boxes ──────────────────────────────────── */
+    .otp-box {
+      width: 52px; height: 60px;
+      font-size: 1.5rem; font-weight: 700;
+      text-align: center;
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      color: #fff;
+      transition: all 0.25s;
+    }
+    .otp-box:focus {
+      outline: none;
+      border-color: #8b5cf6;
+      background: rgba(139,92,246,0.15);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.25);
+      transform: scale(1.06);
+    }
+
+    /* ── Primary button ─────────────────────────────── */
+    .btn-primary {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(139,92,246,0.4);
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(139,92,246,0.55);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── Countdown ring ─────────────────────────────── */
+    .countdown-ring { transform: rotate(-90deg); }
+    .countdown-path {
+      stroke: #8b5cf6;
+      stroke-linecap: round;
+      fill: none;
+      stroke-width: 4;
+      stroke-dasharray: 125.6;
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    /* ── Shake animation for error ──────────────────── */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60%  { transform: translateX(-8px); }
+      40%,80%  { transform: translateX(8px); }
+    }
+    .shake { animation: shake 0.4s ease; }
+
+    /* ── Step transition ──────────────────────────────*/
+    .step { display: none; }
+    .step.active { display: block; animation: fadeUp 0.4s ease; }
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(16px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-anim min-h-screen flex items-center justify-center relative overflow-hidden">
+
+  <!-- Floating orbs -->
+  <div class="orb w-96 h-96 bg-purple-600 top-[-80px] left-[-80px]"></div>
+  <div class="orb w-72 h-72 bg-indigo-500 bottom-[-60px] right-[-60px]" style="animation-delay:3s"></div>
+  <div class="orb w-56 h-56 bg-violet-400 top-1/2 left-1/3" style="animation-delay:5s"></div>
+
+  <!-- Login card -->
+  <div class="glass rounded-3xl w-full max-w-md mx-4 p-8 relative z-10">
+
+    <!-- Logo & heading -->
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center mx-auto mb-4 shadow-lg">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0112 21.622a12.083 12.083 0 01-6.16-17.044L12 14z"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Faculty Management System</h1>
+      <p class="text-sm text-white/50 mt-1">Institutional Access Only · Secure Login</p>
+    </div>
+
+    <!-- ══ STEP 1: Email Entry ══════════════════════════ -->
+    <div id="step-email" class="step active">
+      <p class="text-white/60 text-sm text-center mb-6">
+        Enter your institutional email to receive a one-time password.
+      </p>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-white/60 mb-2 uppercase tracking-wider">
+            Institutional Email
+          </label>
+          <div class="relative">
+            <svg class="w-5 h-5 text-white/40 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+            </svg>
+            <input id="emailInput" type="email" placeholder="you@university.edu"
+                   class="fms-input w-full pl-12 pr-4 py-3.5 rounded-xl text-sm" />
+          </div>
+          <p id="emailError" class="text-red-400 text-xs mt-2 hidden"></p>
+        </div>
+
+        <button id="sendOtpBtn" onclick="handleSendOtp()"
+                class="btn-primary w-full py-3.5 rounded-xl text-white font-semibold text-sm">
+          <span id="sendBtnText">Send OTP →</span>
+          <span id="sendBtnLoader" class="hidden">
+            <svg class="animate-spin w-5 h-5 inline-block" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="white" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="20"/>
+            </svg>
+          </span>
+        </button>
+      </div>
+
+      <!-- Domain note -->
+      <p class="text-center text-xs text-white/30 mt-6">
+        Accepts <code class="text-violet-300">@university.edu</code> and
+        <code class="text-violet-300">@college.ac.in</code> domains only
+      </p>
+    </div>
+
+    <!-- ══ STEP 2: OTP Verification ════════════════════ -->
+    <div id="step-otp" class="step">
+      <div class="text-center mb-6">
+        <p class="text-white/60 text-sm">OTP sent to</p>
+        <p id="otpEmailDisplay" class="text-violet-300 font-medium text-sm mt-0.5"></p>
+      </div>
+
+      <!-- Countdown ring -->
+      <div class="flex justify-center mb-6">
+        <div class="relative w-20 h-20">
+          <svg class="countdown-ring w-20 h-20" viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
+            <circle id="countdownPath" class="countdown-path" cx="22" cy="22" r="20"/>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="countdownNum" class="text-white font-bold text-xl">60</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 OTP boxes -->
+      <div class="flex gap-2 justify-center mb-6">
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="o0"/>
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="o1"/>
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="o2"/>
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="o3"/>
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="o4"/>
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="o5"/>
+      </div>
+
+      <p id="otpError" class="text-red-400 text-xs text-center mb-4 hidden"></p>
+
+      <button id="verifyOtpBtn" onclick="handleVerifyOtp()"
+              class="btn-primary w-full py-3.5 rounded-xl text-white font-semibold text-sm">
+        <span id="verifyBtnText">Verify & Login</span>
+        <span id="verifyBtnLoader" class="hidden">
+          <svg class="animate-spin w-5 h-5 inline-block" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="20"/>
+          </svg>
+        </span>
+      </button>
+
+      <div class="text-center mt-4">
+        <button id="resendBtn" onclick="resendOtp()"
+                class="text-xs text-white/40 hover:text-violet-300 transition-colors disabled:opacity-30"
+                disabled>
+          Resend OTP
+        </button>
+        <span class="text-white/20 mx-2">·</span>
+        <button onclick="goBackToEmail()" class="text-xs text-white/40 hover:text-violet-300 transition-colors">
+          Change email
+        </button>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="mt-8 pt-6 border-t border-white/10 text-center">
+      <p class="text-xs text-white/25">
+        Having trouble? Contact IT Help Desk ·
+        <span class="text-violet-300/60">helpdesk@university.edu</span>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ── Config ──────────────────────────────────────────
+    const API_BASE   = 'http://localhost:8080/api';
+    const OTP_EXPIRY = 60;
+    let countdownTimer;
+    let currentEmail = '';
+
+    // ── Email validation ────────────────────────────────
+    const INST_EMAIL = /(@university\.edu|@college\.ac\.in)$/i;
+
+    function showStep(id) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // ── Step 1: Send OTP ────────────────────────────────
+    async function handleSendOtp() {
+      const email    = document.getElementById('emailInput').value.trim();
+      const errEl    = document.getElementById('emailError');
+      const btn      = document.getElementById('sendOtpBtn');
+      const btnText  = document.getElementById('sendBtnText');
+      const btnLoad  = document.getElementById('sendBtnLoader');
+
+      errEl.classList.add('hidden');
+
+      if (!email) { showEmailError('Please enter your email address.'); return; }
+      if (!INST_EMAIL.test(email)) {
+        showEmailError('Use an institutional email (@university.edu or @college.ac.in).');
+        return;
+      }
+
+      // Loading state
+      btn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoad.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/send-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showEmailError(data.detail || 'Failed to send OTP. Please try again.');
+          return;
+        }
+
+        currentEmail = email;
+        document.getElementById('otpEmailDisplay').textContent = email;
+        showStep('step-otp');
+        startCountdown();
+        document.getElementById('o0').focus();
+
+      } catch (err) {
+        // Demo mode — bypass API and allow any valid domain email
+        currentEmail = email;
+        document.getElementById('otpEmailDisplay').textContent = email;
+        showStep('step-otp');
+        startCountdown();
+        document.getElementById('o0').focus();
+      } finally {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoad.classList.add('hidden');
+      }
+    }
+
+    function showEmailError(msg) {
+      const errEl = document.getElementById('emailError');
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+      document.getElementById('emailInput').classList.add('shake');
+      setTimeout(() => document.getElementById('emailInput').classList.remove('shake'), 500);
+    }
+
+    // ── OTP auto-advance ────────────────────────────────
+    document.querySelectorAll('.otp-box').forEach((box, i) => {
+      box.addEventListener('input', e => {
+        const val = e.target.value.replace(/\D/g, '');
+        e.target.value = val;
+        if (val && i < 5) document.getElementById('o' + (i + 1)).focus();
+      });
+      box.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !box.value && i > 0)
+          document.getElementById('o' + (i - 1)).focus();
+        if (e.key === 'Enter') handleVerifyOtp();
+      });
+      box.addEventListener('paste', e => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+        [...text].forEach((ch, idx) => {
+          const el = document.getElementById('o' + idx);
+          if (el) el.value = ch;
+        });
+        const last = Math.min(text.length, 5);
+        document.getElementById('o' + last).focus();
+      });
+    });
+
+    // ── Countdown ───────────────────────────────────────
+    function startCountdown() {
+      let timeLeft = OTP_EXPIRY;
+      const numEl  = document.getElementById('countdownNum');
+      const pathEl = document.getElementById('countdownPath');
+      const resend = document.getElementById('resendBtn');
+      const circum = 125.6;
+
+      resend.disabled = true;
+      clearInterval(countdownTimer);
+
+      countdownTimer = setInterval(() => {
+        timeLeft--;
+        numEl.textContent = timeLeft;
+        pathEl.style.strokeDashoffset = circum * (1 - timeLeft / OTP_EXPIRY);
+
+        if (timeLeft <= 0) {
+          clearInterval(countdownTimer);
+          numEl.textContent    = '✕';
+          pathEl.style.stroke  = '#f87171';
+          resend.disabled      = false;
+        }
+      }, 1000);
+    }
+
+    function resendOtp() {
+      clearInterval(countdownTimer);
+      document.querySelectorAll('.otp-box').forEach(b => b.value = '');
+      document.getElementById('countdownPath').style.stroke = '#8b5cf6';
+      startCountdown();
+      document.getElementById('o0').focus();
+    }
+
+    function goBackToEmail() {
+      clearInterval(countdownTimer);
+      showStep('step-email');
+    }
+
+    // ── Step 2: Verify OTP ──────────────────────────────
+    async function handleVerifyOtp() {
+      const otp = [...Array(6)].map((_,i) => document.getElementById('o'+i).value).join('');
+      const errEl   = document.getElementById('otpError');
+      const btn     = document.getElementById('verifyOtpBtn');
+      const btnText = document.getElementById('verifyBtnText');
+      const btnLoad = document.getElementById('verifyBtnLoader');
+
+      errEl.classList.add('hidden');
+
+      if (otp.length < 6 || !/^\d{6}$/.test(otp)) {
+        showOtpError('Enter all 6 digits of your OTP.');
+        return;
+      }
+
+      btn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoad.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: currentEmail, otp })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showOtpError(data.detail || 'Invalid OTP. Please try again.');
+          return;
+        }
+
+        // Store tokens
+        localStorage.setItem('fms_access_token',  data.accessToken);
+        localStorage.setItem('fms_refresh_token', data.refreshToken);
+        localStorage.setItem('fms_user_email',    data.email);
+        localStorage.setItem('fms_user_role',     data.role);
+        localStorage.setItem('fms_user_name',     data.fullName);
+
+        clearInterval(countdownTimer);
+        window.location.href = 'dashboard.html';
+
+      } catch (err) {
+        // Demo mode — accept "123456" as OTP
+        if (otp === '123456') {
+          localStorage.setItem('fms_access_token',  'demo-token');
+          localStorage.setItem('fms_user_email',    currentEmail);
+          localStorage.setItem('fms_user_role',     'PROFESSOR');
+          localStorage.setItem('fms_user_name',     'Dr. Amit Sharma');
+          clearInterval(countdownTimer);
+          window.location.href = 'dashboard.html';
+        } else {
+          showOtpError('Invalid OTP. (Demo: use 123456)');
+        }
+      } finally {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoad.classList.add('hidden');
+      }
+    }
+
+    function showOtpError(msg) {
+      const errEl = document.getElementById('otpError');
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+      document.querySelectorAll('.otp-box').forEach(b => {
+        b.classList.add('shake');
+        setTimeout(() => b.classList.remove('shake'), 500);
+      });
+    }
+
+    // Enter key on email input
+    document.getElementById('emailInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleSendOtp();
+    });
+  </script>
+</body>
+</html>
