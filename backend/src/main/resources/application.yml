@@ -4,12 +4,14 @@ server:
     context-path: /api
 
 spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
   application:
     name: faculty-management-system
 
   datasource:
-    # Primary: explicit Spring datasource variables (works on Render and other hosts).
-    # Clever Cloud: MYSQL_ADDON_* variables can be copied into the host running this app.
+    # Primary: explicit Spring datasource variables (works on Render and local VS Code runs).
+    # Clever Cloud: MYSQL_ADDON_* variables are also supported as a fallback.
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${MYSQL_ADDON_HOST:localhost}:${MYSQL_ADDON_PORT:3306}/${MYSQL_ADDON_DB:faculty_management_db}?useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true}
     username: ${SPRING_DATASOURCE_USERNAME:${MYSQL_ADDON_USER:root}}
     password: ${SPRING_DATASOURCE_PASSWORD:${MYSQL_ADDON_PASSWORD:root}}
@@ -30,10 +32,10 @@ spring:
         default_batch_fetch_size: 25
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USER:noreply@university.edu}
-    password: ${MAIL_PASS:changeme}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:noreply@university.edu}
+    password: ${MAIL_PASSWORD:changeme}
     properties:
       mail:
         smtp:
@@ -41,23 +43,19 @@ spring:
           starttls:
             enable: true
 
-# ── RapidAPI Configuration ─────────────────────────────────────────
 rapidapi:
   key: ${RAPIDAPI_KEY:}
   host: platzi-reviews1.p.rapidapi.com
   url: https://platzi-reviews1.p.rapidapi.com/graphql
 
-# ── JWT & App Configuration ────────────────────────────────────────
 app:
   jwt:
     secret: ${JWT_SECRET:change-me-in-production}
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
-
   otp:
     expiry-seconds: 60
     length: 6
-
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5500,https://faculty-management-mojz.onrender.com}
 
