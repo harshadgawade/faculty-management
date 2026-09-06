@@ -1,131 +1,124 @@
-# 🎓 Faculty Management System
+# Faculty Management System
 
-A full-stack **Faculty Management Dashboard** built for academic institutions and universities.
+Full-stack Faculty Management System with a static HTML/CSS/JavaScript frontend, Spring Boot backend, and MySQL database.
 
----
+## Run the complete project in VS Code
 
-## Tech Stack
+### Requirements
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | HTML5 · CSS3 · Tailwind CSS · JavaScript ES6+ · Chart.js |
-| **Backend** | Java 17 · Spring Boot 3.2 · Spring Security · Spring Data JPA · Lombok |
-| **Database** | MySQL 8.0 / PostgreSQL 14 |
-| **Auth** | JWT (JJWT 0.12) + 2FA OTP via JavaMailSender |
-| **Reports** | iTextPDF · Apache POI |
+- JDK 17
+- VS Code
+- VS Code Extension Pack for Java (recommended)
+- Internet access for Maven dependencies
+- A MySQL database. Clever Cloud MySQL can be used as the remote database.
 
----
+### 1. Clone and open the repository
 
-## Features
+Open the repository folder in VS Code:
 
-- 🔐 **Two-Factor Login** — Institutional email OTP (60-second countdown, account lockout)
-- 📊 **Live Dashboard** — KPI cards, attendance trend, department distribution, salary charts
-- 🗂 **Faculty Directory** — Search, filter by dept/role, org hierarchy tree
-- 📅 **Academic Calendar** — Events, holidays, exams with visual markers
-- ✅ **Attendance Tracking** — Punch-in/out lecture logger, monthly log table
-- 🏖 **Leave Management** — Apply, approve/reject workflow with pending queue
-- 💰 **Payroll Module** — Salary tier breakdown, monthly payroll, salary slip generation
-- 📋 **Task Board** — Kanban-style To-Do with priority badges
-- 📄 **Reports** — Export attendance, payroll, NBA/NAAC, workload, leave, research data
-- 🔔 **Notice Board** — Internal announcements with categories
-- 🌐 **Multi-Language** — English / Hindi / Marathi selector
-
----
-
-## Project Structure
-
-```
-faculty-management-system/
-├── database/
-│   └── schema.sql              # MySQL schema — 17 tables, 6 triggers, seed data
-├── backend/                    # Spring Boot Maven project
-│   ├── pom.xml
-│   └── src/main/java/com/university/fms/
-│       ├── config/             # SecurityConfig (JWT, CORS, RBAC)
-│       ├── controller/         # REST controllers (Auth, Faculty, Attendance, Leave, Dashboard)
-│       ├── dto/                # Request/Response DTOs
-│       ├── entity/             # JPA entities (12 entities)
-│       ├── repository/         # Spring Data JPA repositories
-│       ├── security/           # JwtTokenProvider, JwtAuthenticationFilter
-│       ├── service/            # Business logic (Auth, Faculty, Attendance, Leave, Payroll, Dashboard)
-│       ├── util/               # OtpUtil
-│       └── exception/          # GlobalExceptionHandler (RFC 9457 ProblemDetail)
-└── frontend/
-    ├── login.html              # Glassmorphic 2-step OTP login page
-    ├── dashboard.html          # Full dashboard — 8 sections, 5 charts
-    └── assets/js/
-        └── api.js              # Centralised API client (window.Api, window.Auth)
+```text
+faculty-management/
 ```
 
----
+### 2. Create local environment file
 
-## Database Schema
+Copy `.env.example` to `.env` in the repository root and fill in your database values.
 
-17 tables: `roles`, `departments`, `users`, `faculty_details`, `subjects`,
-`faculty_subject_assignments`, `lecture_logs`, `attendance`, `leave_types`,
-`leave_requests`, `payroll_grades`, `payroll`, `budget_grants`,
-`academic_calendar`, `announcements`, `tasks`, `audit_logs`
+For Clever Cloud, use the database host, port, database name, username and password from your Clever Cloud MySQL addon. Do not commit `.env`.
 
-6 triggers: payroll auto-calculation, email domain guard, OTP cleanup, leave audit trail, duplicate attendance prevention.
+The Spring Boot configuration automatically reads `.env` from the repository root when the backend is started locally.
 
----
+### 3. Start everything
 
-## Setup & Run
+In VS Code:
 
-### 1. Database
-```sql
--- Import the schema
-mysql -u root -p < database/schema.sql
+**Terminal → Run Task → `FMS: Start Full Project`**
+
+This starts:
+
+- Spring Boot backend on `http://localhost:8080`
+- Frontend server on `http://localhost:5500`
+
+The frontend can be opened at:
+
+```text
+http://localhost:5500/login.html
 ```
 
-### 2. Backend
+The backend API uses the `/api` context path, for example:
+
+```text
+http://localhost:8080/api/health
+```
+
+### Alternative: backend only
+
+Use the VS Code Run and Debug panel and start **FMS Backend (Spring Boot)**, or run:
+
+Windows:
+
+```bat
+backend\mvnw.cmd spring-boot:run
+```
+
+macOS/Linux:
+
 ```bash
-cd backend
-
-# Configure environment variables (or edit application.yml)
-export DB_USER=root
-export DB_PASS=yourpassword
-export MAIL_USER=noreply@university.edu
-export MAIL_PASS=yourapppassword
-export JWT_SECRET=your64charbase64secret
-
-mvn spring-boot:run
-# API runs at http://localhost:8080/api
+./backend/mvnw spring-boot:run
 ```
 
-### 3. Frontend
-Open `frontend/login.html` directly in a browser, or serve via Live Server (VS Code) on port 5500.
+### Frontend only
 
-> **Demo login:** Any `@university.edu` email registered in the `users` table — OTP is sent to that email.
+If you only need to inspect the UI:
 
----
+Windows:
 
-## REST API Endpoints
+```bat
+py -m http.server 5500 --directory frontend
+```
 
-| Method | Path | Access | Description |
-|---|---|---|---|
-| POST | `/api/auth/send-otp` | Public | Send OTP to institutional email |
-| POST | `/api/auth/verify-otp` | Public | Verify OTP → receive JWT |
-| GET | `/api/dashboard/stats` | Any auth | KPIs + chart data |
-| GET | `/api/faculty` | Any auth | Search/list faculty (paginated) |
-| POST | `/api/faculty` | Dean/Admin | Create faculty |
-| PUT | `/api/faculty/{id}` | HOD+ | Update faculty |
-| DELETE | `/api/faculty/{id}` | Dean/Admin | Soft-delete faculty |
-| POST | `/api/attendance` | Any auth | Mark attendance |
-| GET | `/api/attendance/monthly` | Any auth | Monthly attendance log |
-| POST | `/api/leaves` | Any auth | Apply for leave |
-| GET | `/api/leaves/pending` | HOD+ | Pending approval queue |
-| POST | `/api/leaves/{id}/approve` | HOD+ | Approve leave |
-| POST | `/api/leaves/{id}/reject` | HOD+ | Reject leave |
+macOS/Linux:
 
----
+```bash
+python3 -m http.server 5500 --directory frontend
+```
 
-## RBAC Roles
+## Local architecture
 
-`SUPER_ADMIN` → `DEAN` → `HOD` → `PROFESSOR` → `ASSOC_PROFESSOR` → `ASST_PROFESSOR` → `GUEST_LECTURER`
+```text
+Browser
+  ↓
+Frontend (localhost:5500)
+  ↓
+Spring Boot API (localhost:8080/api)
+  ↓
+MySQL / Clever Cloud
+```
 
----
+The backend also exposes the frontend directory during a local Spring Boot run, so opening `http://localhost:8080/` can serve the frontend directly when the repository is run from the expected `backend/` working directory.
 
-## License
+## Database configuration
 
-MIT © 2026 University FMS
+The preferred local variables are:
+
+```text
+SPRING_DATASOURCE_URL
+SPRING_DATASOURCE_USERNAME
+SPRING_DATASOURCE_PASSWORD
+```
+
+Clever Cloud linked-app variables are also supported:
+
+```text
+MYSQL_ADDON_HOST
+MYSQL_ADDON_PORT
+MYSQL_ADDON_DB
+MYSQL_ADDON_USER
+MYSQL_ADDON_PASSWORD
+```
+
+Never put real passwords, mail credentials, JWT secrets, or API keys into GitHub.
+
+## Render deployment
+
+The deployed frontend and backend can remain separate services. Render environment variables take precedence over local `.env` values, while the same Spring datasource configuration can connect the backend to Clever Cloud MySQL.
