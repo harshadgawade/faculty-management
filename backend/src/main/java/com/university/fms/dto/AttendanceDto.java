@@ -12,10 +12,11 @@ public class AttendanceDto {
     private Long id;
 
     @NotNull private Long facultyId;
+    @NotNull private Long subjectId;
     @NotNull private LocalDate attendanceDate;
     @NotNull private AttendanceStatus status;
 
     private LocalTime checkIn;
     private LocalTime checkOut;
-    private String    remarks;
+    private String remarks;
 }
