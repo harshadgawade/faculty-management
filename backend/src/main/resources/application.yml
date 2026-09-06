@@ -8,9 +8,11 @@ spring:
     name: faculty-management-system
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/faculty_management_db?useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:root}
+    # Primary: explicit Spring datasource variables (works on Render and other hosts).
+    # Clever Cloud: MYSQL_ADDON_* variables can be copied into the host running this app.
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${MYSQL_ADDON_HOST:localhost}:${MYSQL_ADDON_PORT:3306}/${MYSQL_ADDON_DB:faculty_management_db}?useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:${MYSQL_ADDON_USER:root}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${MYSQL_ADDON_PASSWORD:root}}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -41,16 +43,16 @@ spring:
 
 # ── RapidAPI Configuration ─────────────────────────────────────────
 rapidapi:
-  key: ${RAPIDAPI_KEY:d8c09ef7aemshfa431790f80a5a3p13182ejsn311e968e7f97}
+  key: ${RAPIDAPI_KEY:}
   host: platzi-reviews1.p.rapidapi.com
   url: https://platzi-reviews1.p.rapidapi.com/graphql
 
 # ── JWT & App Configuration ────────────────────────────────────────
 app:
   jwt:
-    secret: ${JWT_SECRET:7f3a9c2e1b4d6f8e0a2c4b6d8f1e3a5c7b9d0f2e4a6c8b0d2f4a6c8e0b2d4f6}
-    expiration-ms: 86400000          # 24 hours
-    refresh-expiration-ms: 604800000 # 7 days
+    secret: ${JWT_SECRET:change-me-in-production}
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
 
   otp:
     expiry-seconds: 60
