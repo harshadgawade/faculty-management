@@ -5,10 +5,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Keeps the department lookup complete on every deployment.
- * INSERT IGNORE makes this safe when the departments already exist.
- */
+/** Keeps the department lookup complete for the 2024 academic curriculum. */
 @Component
 @RequiredArgsConstructor
 public class DepartmentSeedConfig implements CommandLineRunner {
@@ -20,34 +17,26 @@ public class DepartmentSeedConfig implements CommandLineRunner {
         String[][] departments = {
             {"CS", "Computer Science & Engineering"},
             {"IT", "Information Technology"},
-            {"AI", "Artificial Intelligence & Machine Learning"},
+            {"AIML", "Artificial Intelligence & Machine Learning"},
             {"DS", "Data Science"},
-            {"CSE-DS", "Computer Science & Engineering (Data Science)"},
-            {"CSE-AI", "Computer Science & Engineering (Artificial Intelligence)"},
-            {"ECE", "Electronics & Communication Engineering"},
-            {"EEE", "Electrical & Electronics Engineering"},
+            {"CYBER", "Cyber Security"},
+            {"SE", "Software Engineering"},
+            {"CLOUD", "Cloud Computing"},
+            {"BCA", "Computer Applications"},
+            {"ECE", "Electronics & Communication"},
             {"EE", "Electrical Engineering"},
             {"ME", "Mechanical Engineering"},
             {"CE", "Civil Engineering"},
-            {"AE", "Automobile Engineering"},
-            {"CHE", "Chemical Engineering"},
-            {"AERO", "Aerospace Engineering"},
-            {"BIO", "Biotechnology"},
+            {"AUTO", "Automobile Engineering"},
+            {"RA", "Robotics & Automation"},
+            {"BT", "Biotechnology"},
             {"BME", "Biomedical Engineering"},
-            {"ARCH", "Architecture"},
-            {"MCA", "Master of Computer Applications"},
-            {"MBA", "Master of Business Administration"},
-            {"MCOM", "Master of Commerce"},
-            {"MSC-CS", "M.Sc. Computer Science"},
-            {"MSC-IT", "M.Sc. Information Technology"},
-            {"SCI", "Basic Sciences"},
             {"MATH", "Mathematics"},
             {"PHY", "Physics"},
             {"CHEM", "Chemistry"},
-            {"ENG", "English & Communication Skills"},
-            {"COM", "Commerce & Management"},
-            {"LAW", "Law"},
-            {"EDU", "Education"}
+            {"CM", "Commerce & Management"},
+            {"ENG", "English & Communication"},
+            {"BBA", "Bachelor of Business Administration"}
         };
 
         for (String[] d : departments) {
