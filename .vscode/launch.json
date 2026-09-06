@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "FMS Backend (Spring Boot)",
+      "request": "launch",
+      "mainClass": "com.university.fms.FacultyManagementSystemApplication",
+      "projectName": "faculty-management-system",
+      "cwd": "${workspaceFolder}/backend"
+    }
+  ]
+}
