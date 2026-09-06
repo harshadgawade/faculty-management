@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "FMS: Start Backend",
+      "type": "shell",
+      "windows": {
+        "command": "backend\\mvnw.cmd spring-boot:run"
+      },
+      "linux": {
+        "command": "./backend/mvnw spring-boot:run"
+      },
+      "osx": {
+        "command": "./backend/mvnw spring-boot:run"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "FMS: Start Frontend",
+      "type": "shell",
+      "windows": {
+        "command": "py -m http.server 5500 --directory frontend"
+      },
+      "linux": {
+        "command": "python3 -m http.server 5500 --directory frontend"
+      },
+      "osx": {
+        "command": "python3 -m http.server 5500 --directory frontend"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "FMS: Start Full Project",
+      "dependsOn": [
+        "FMS: Start Backend",
+        "FMS: Start Frontend"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}
