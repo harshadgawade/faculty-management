@@ -13,10 +13,11 @@ import java.util.Optional;
 
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
-    Optional<Attendance> findByFacultyIdAndAttendanceDate(Long facultyId, LocalDate date);
+    Optional<Attendance> findByFacultyIdAndSubjectIdAndAttendanceDate(Long facultyId, Long subjectId, LocalDate date);
 
-    List<Attendance> findByFacultyIdAndAttendanceDateBetween(
-            Long facultyId, LocalDate from, LocalDate to);
+    List<Attendance> findByFacultyIdAndAttendanceDateBetween(Long facultyId, LocalDate from, LocalDate to);
+
+    List<Attendance> findByFacultyIdAndSubjectIdAndAttendanceDateBetween(Long facultyId, Long subjectId, LocalDate from, LocalDate to);
 
     @Query("""
             SELECT a.status AS status, COUNT(a) AS cnt
@@ -27,7 +28,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             """)
     List<Map<String, Object>> getSummary(@Param("facultyId") Long facultyId,
                                          @Param("from") LocalDate from,
-                                         @Param("to")   LocalDate to);
+                                         @Param("to") LocalDate to);
 
     @Query("""
             SELECT COUNT(a) FROM Attendance a
@@ -36,7 +37,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
               AND a.attendanceDate BETWEEN :from AND :to
             """)
     long countByStatus(@Param("facultyId") Long facultyId,
-                       @Param("status")    AttendanceStatus status,
-                       @Param("from")      LocalDate from,
-                       @Param("to")        LocalDate to);
+                       @Param("status") AttendanceStatus status,
+                       @Param("from") LocalDate from,
+                       @Param("to") LocalDate to);
 }
