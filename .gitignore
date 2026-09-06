@@ -8,9 +8,15 @@ target/
 # ── IDE / OS ────────────────────────────────────────────────
 .idea/
 *.iml
-.vscode/
 .DS_Store
 Thumbs.db
+
+# Keep .vscode launch/tasks configuration in the repository.
+
+# ── Local environment / secrets ─────────────────────────────
+.env
+.env.*
+!.env.example
 
 # ── Spring Boot secrets ─────────────────────────────────────
 backend/src/main/resources/application-local.yml
